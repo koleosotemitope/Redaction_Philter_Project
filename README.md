@@ -74,6 +74,25 @@ python3 main.py -i ./data/i2b2_notes/ -o ./data/i2b2_results/ -f ./configs/philt
 ```
 IMPORTANT NOTE: XML-formatted files do NOT have PHI-reduced text. Instead, they contain the original note text with the PHI tags identified by Philter. 
 
+### Optional: Convert PDF/Images to Plain Text First
+
+Philter processes plain text notes. If your source files are PDF/JPEG/PNG/TIFF/BMP, convert them to `.txt` first:
+
+```bash
+pip3 install -r requirements_ocr.txt
+python3 ./generate_dataset/convert_docs_to_txt.py -i ./data/raw_docs/ -o ./data/ingested_txt/
+```
+
+Then run Philter using the generated text directory:
+
+```bash
+python3 main.py -i ./data/ingested_txt/ -o ./data/i2b2_results/ -f ./configs/philter_delta.json --prod=True --outputformat "asterisk"
+```
+
+Notes:
+- For image OCR, install system Tesseract OCR and ensure it is available on PATH.
+- For PDFs, the converter first tries native text extraction and falls back to OCR when needed.
+
 If you'd like to output ONLY the PHI-reduced text with asterisks obscuring Philter-identified PHI, simply add the -outputformat "asterisk" option:
 ```bash
 python3 main.py -i ./data/i2b2_notes/ -o ./data/i2b2_results/ -f ./configs/philter_delta.json --prod=True --outputformat "asterisk"
