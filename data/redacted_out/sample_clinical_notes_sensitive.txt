@@ -1,0 +1,66 @@
+Clinical Documentation Sample Set
+Patient Name: ******* ********
+**** ** Birth: **/**/****
+NHS Number: *** *** ****
+Address: ** ****** ********, ********, West Yorkshire *** 8JT
+*****: ***** ******
+Email: *******.**********@***********.***
+Hospital ID: ***-******
+Date of Visit: ** *** ****
+Chief Complaint:
+Persistent chest discomfort and shortness of breath for 3 days.
+History of Present Illness:
+Patient reports intermittent substernal chest tightness associated with mild exertion. Denies syncope but reports
+occasional dizziness. Past medical history includes hypertension and hyperlipidaemia. Current medications include
+Atorvastatin 20mg daily and Ramipril 5mg daily.
+Assessment:
+Possible unstable angina. ECG showed nonspecific ST changes. Troponin pending.
+Plan:
+Admit for observation, serial troponins, cardiology review, and stress testing.
+Consultant: Dr. ***** ********, *** *******
+Referral ******
+To: Neurology Department, St. ****'s Medical Centre
+Referring GP: Dr. ******** ******
+Practice Address: ** ***** **** *******, ***** **** 4RF
+Patient: ***** ******
+Date of Birth: **/**/****
+NHS Number: *** *** ****
+Insurance ****** ID: ***-**-*****
+Dear *********,
+I am referring Ms. ***** ****** for evaluation of chronic migraine headaches with increasing frequency over the past
+six months. She reports associated photophobia, nausea, and visual aura. MRI brain imaging performed on ** *****
+**** was unremarkable.
+The patient currently works as a financial analyst and reports significant work-related stress. Current medications
+include Sumatriptan 50mg PRN and Propranolol 40mg twice daily.
+Please assess and advise regarding long-term migraine management and further investigation if indicated.
+**** regards,
+Dr. ******** ******
+*** *******
+
+Additional Clinical Note (Page 2)
+*****
+Value
+Patient ****
+******* *******
+***
+**/**/****
+NHS Number
+*** *** ****
+Home Address
+** **** **** ****, ********** *** 6PL
+Mobile
+***** ******
+Emergency Contact
+****** ******* - ***** ******
+Employer
+******** ******* Services Ltd.
+Progress Note:
+Patient presented for follow-up regarding poorly controlled Type 2 Diabetes Mellitus. Recent HbA1c was 9.2%. Patient
+admits inconsistent adherence to dietary recommendations. Complains of intermittent numbness in both feet.
+Lab Results:
+Fasting glucose: 14.1 mmol/L
+Creatinine: 92 umol/L
+eGFR: 78 mL/min
+Treatment Plan:
+Increase Metformin to 1g BID and initiate diabetic foot care referral. Follow-up in 8 weeks.
+Clinician Signature: Dr. ***** ******

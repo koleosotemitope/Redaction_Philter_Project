@@ -1,3 +1,4 @@
+
 If you use this software for any publication, please cite:
 Norgeot, B., Muenzen, K., Peterson, T.A. et al. Protected Health Information filter (Philter): accurately and securely de-identifying free-text clinical notes. npj Digit. Med. 3, 57 (2020). https://doi.org/10.1038/s41746-020-0258-y
 
@@ -140,5 +141,149 @@ python3 main.py -i ./data/i2b2_notes/ -a ./data/i2b2_anno/ -o ./data/i2b2_result
 ```
 
 By defult, this will output PHI-reduced notes (.txt format) in the specified output directory. If this command is used with the --outputformat i2b2 flag (or with no --outputformat specified, since i2b2 format is the default option), the evaluation script will not be run and the script will output notes with the original text and the Philter PHI tags (.xml format) in the specified output directory.
-#   R e d a c t i o n _ P h i l t e r _ P r o j e c t  
- 
+
+## 3. Redacting a PDF End-to-End (Windows Quick Start)
+
+This section shows the full workflow from dropping in a PDF to getting a redacted text file.
+
+### Prerequisites
+
+1. Create and activate a virtual environment.
+2. Install base dependencies:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+3. Install OCR/PDF conversion dependencies:
+
+```powershell
+python -m pip install -r requirements_ocr.txt
+```
+
+### Step 1: Place your PDF in the input folder
+
+Put your source PDF in:
+
+```text
+./data/raw_docs/
+```
+
+Example:
+
+```text
+./data/raw_docs/sample_clinical_notes_sensitive.pdf
+```
+
+### Step 2: Convert PDF to plain text
+
+Use the converter script from the generate_dataset folder:
+
+```powershell
+python .\generate_dataset\convert_docs_to_txt.py -i .\data\raw_docs\ -o .\data\ingested_txt\
+```
+
+Expected output:
+
+```text
+./data/ingested_txt/sample_clinical_notes_sensitive.txt
+```
+
+### Step 3: Create redaction output directory
+
+Philter expects the output directory to already exist.
+
+```powershell
+New-Item -ItemType Directory -Force .\data\redacted_out | Out-Null
+```
+
+### Step 4: Redact the converted text
+
+```powershell
+python .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
+```
+
+### Step 5: Open the final redacted file
+
+Final output will be in:
+
+```text
+./data/redacted_out/
+```
+
+For the sample above:
+
+```text
+./data/redacted_out/sample_clinical_notes_sensitive.txt
+```
+
+---
+
+## 4. Common Errors and Fixes
+
+### Error: missing pdf2image/pytesseract
+
+Symptom:
+
+```text
+FAIL ... (missing pdf2image/pytesseract)
+```
+
+Fix:
+
+```powershell
+python -m pip install -r requirements_ocr.txt
+```
+
+Also ensure you run the correct script path:
+
+```powershell
+python .\generate_dataset\convert_docs_to_txt.py ...
+```
+
+### Error: Filepath does not exist for output directory
+
+Symptom:
+
+```text
+Exception: ('Filepath does not exist', '.\\data\\redacted_out\\')
+```
+
+Fix:
+
+```powershell
+New-Item -ItemType Directory -Force .\data\redacted_out | Out-Null
+```
+
+### Error: Resource averaged_perceptron_tagger not found
+
+Symptom:
+
+```text
+LookupError: Resource averaged_perceptron_tagger not found
+```
+
+Fix:
+
+```powershell
+python -c "import nltk; nltk.download('averaged_perceptron_tagger')"
+```
+
+### Error: re.error global flags not at the start of the expression
+
+Symptom on Python 3.11+:
+
+```text
+re.error: global flags not at the start of the expression
+```
+
+Cause:
+- Some legacy regex files include inline case-insensitive markers like `(?i)` in the middle of expressions.
+
+Fix in this repo:
+- `philter.py` and `philter_ucsf/philter.py` now normalize inline `(?i)` markers before compiling regex patterns.
+
+### OCR notes
+
+- For scanned PDFs/images, install system Tesseract OCR and ensure `tesseract` is available on PATH.
+- For text-native PDFs, conversion often succeeds without OCR fallback.
