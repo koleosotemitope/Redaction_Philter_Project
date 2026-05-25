@@ -1,0 +1,1 @@
+\b(?i)(Insurance\s\&\sBilling\sInformation|Private\sInsurance\sProvider|Policy\sNumber|Claim\sReference|Bank\sSort\sCode|Partial\sAccount\sNumber|Outstanding\sBalance)\b

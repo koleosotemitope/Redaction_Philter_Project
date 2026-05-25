@@ -142,79 +142,139 @@ python3 main.py -i ./data/i2b2_notes/ -a ./data/i2b2_anno/ -o ./data/i2b2_result
 
 By defult, this will output PHI-reduced notes (.txt format) in the specified output directory. If this command is used with the --outputformat i2b2 flag (or with no --outputformat specified, since i2b2 format is the default option), the evaluation script will not be run and the script will output notes with the original text and the Philter PHI tags (.xml format) in the specified output directory.
 
-## 3. Redacting a PDF End-to-End (Windows Quick Start)
+## 3. Project Runbook (Windows: Step-by-Step Commands + What They Do)
 
-This section shows the full workflow from dropping in a PDF to getting a redacted text file.
+This is the fastest end-to-end workflow for this repo, from raw files to redacted output.
 
-### Prerequisites
+### A. One-time setup
 
-1. Create and activate a virtual environment.
-2. Install base dependencies:
+1. Create and activate your virtual environment.
+
+2. Install base runtime dependencies:
 
 ```powershell
-python -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
+
+What this does: installs core Philter packages used by `main.py`.
 
 3. Install OCR/PDF conversion dependencies:
 
 ```powershell
-python -m pip install -r requirements_ocr.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements_ocr.txt
 ```
 
-### Step 1: Place your PDF in the input folder
+What this does: installs `pytesseract`, `pdf2image`, and related packages used by `generate_dataset/convert_docs_to_txt.py`.
 
-Put your source PDF in:
+Important: use `\.venv\Scripts\python.exe` for all commands below to avoid interpreter mismatch.
+
+### B. If your input is already text (`.txt`)
+
+1. Make sure your text files are in:
 
 ```text
-./data/raw_docs/
+./data/ingested_txt/
 ```
 
-Example:
-
-```text
-./data/raw_docs/sample_clinical_notes_sensitive.pdf
-```
-
-### Step 2: Convert PDF to plain text
-
-Use the converter script from the generate_dataset folder:
-
-```powershell
-python .\generate_dataset\convert_docs_to_txt.py -i .\data\raw_docs\ -o .\data\ingested_txt\
-```
-
-Expected output:
-
-```text
-./data/ingested_txt/sample_clinical_notes_sensitive.txt
-```
-
-### Step 3: Create redaction output directory
-
-Philter expects the output directory to already exist.
+2. Create output directory if missing:
 
 ```powershell
 New-Item -ItemType Directory -Force .\data\redacted_out | Out-Null
 ```
 
-### Step 4: Redact the converted text
+What this does: ensures the output path exists (Philter expects it to exist).
+
+3. Run redaction:
 
 ```powershell
-python .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
+.\.venv\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
 ```
 
-### Step 5: Open the final redacted file
+What this does:
+- `-i`: input folder of notes
+- `-o`: output folder for redacted notes
+- `-f`: active regex/filter config
+- `--prod=True`: production redaction run
+- `--outputformat asterisk`: masks detected sensitive text with `*`
 
-Final output will be in:
+### C. If your input is PDF/image
+
+1. Put source files in:
 
 ```text
-./data/redacted_out/
+./data/raw_docs/
 ```
 
-For the sample above:
+2. Convert to text:
+
+```powershell
+.\.venv\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py -i .\data\raw_docs\ -o .\data\ingested_txt\
+```
+
+What this does: extracts text from PDFs/images and writes `.txt` files to `./data/ingested_txt/`.
+
+3. Run the same redaction command from section B:
+
+```powershell
+.\.venv\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
+```
+
+### D. Verify results quickly
+
+1. Open a redacted output file, for example:
 
 ```text
 ./data/redacted_out/sample_clinical_notes_sensitive.txt
+```
+
+2. Optional keyword checks:
+
+```powershell
+Select-String -Path .\data\redacted_out\*.txt -Pattern 'QQ\s\d{2}\s\d{2}\s\d{2}\s[A-Z]|\b\d{2}-\d{2}-\d{2}\b|\b[A-PR-UWYZ][A-HK-Y]?\d[\dA-HJKSTUW]?\s?\d[ABD-HJLNP-UW-Z]{2}\b'
+```
+
+What this does: searches output files for patterns that resemble UK NI numbers, sort codes, and UK postcodes.
+
+### E. Linux/macOS command equivalents
+
+Use this if you are not on Windows.
+
+1. Create and activate venv:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+2. Install dependencies:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements_ocr.txt
+```
+
+3. Convert PDFs/images to text:
+
+```bash
+python3 ./generate_dataset/convert_docs_to_txt.py -i ./data/raw_docs/ -o ./data/ingested_txt/
+```
+
+4. Create output folder:
+
+```bash
+mkdir -p ./data/redacted_out/
+```
+
+5. Run redaction:
+
+```bash
+python3 ./main.py -i ./data/ingested_txt/ -o ./data/redacted_out/ -f ./configs/philter_delta.json --prod=True --outputformat asterisk
+```
+
+6. Optional pattern verification:
+
+```bash
+grep -En 'QQ[[:space:]][0-9]{2}[[:space:]][0-9]{2}[[:space:]][0-9]{2}[[:space:]][A-Z]|[0-9]{2}-[0-9]{2}-[0-9]{2}|[A-PR-UWYZ][A-HK-Y]?[0-9][0-9A-HJKSTUW]?[[:space:]]?[0-9][ABD-HJLNP-UW-Z]{2}' ./data/redacted_out/*.txt
 ```
 
 ---
@@ -232,13 +292,13 @@ FAIL ... (missing pdf2image/pytesseract)
 Fix:
 
 ```powershell
-python -m pip install -r requirements_ocr.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements_ocr.txt
 ```
 
 Also ensure you run the correct script path:
 
 ```powershell
-python .\generate_dataset\convert_docs_to_txt.py ...
+.\.venv\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py ...
 ```
 
 ### Error: Filepath does not exist for output directory
@@ -266,7 +326,7 @@ LookupError: Resource averaged_perceptron_tagger not found
 Fix:
 
 ```powershell
-python -c "import nltk; nltk.download('averaged_perceptron_tagger')"
+.\.venv\Scripts\python.exe -c "import nltk; nltk.download('averaged_perceptron_tagger')"
 ```
 
 ### Error: re.error global flags not at the start of the expression
@@ -282,6 +342,62 @@ Cause:
 
 Fix in this repo:
 - `philter.py` and `philter_ucsf/philter.py` now normalize inline `(?i)` markers before compiling regex patterns.
+
+### Issue: Last postcode characters are still visible after redaction
+
+Symptom:
+
+```text
+Address: ** ****** ********, ********, West Yorkshire *** 8JT
+```
+
+Cause:
+- Existing US ZIP-focused address rules can miss UK inward code fragments.
+
+Process to fix:
+
+1. Add a UK postcode regex file:
+
+```text
+filters/regex/addresses/uk_postcode_transformed.txt
+```
+
+with this pattern:
+
+```text
+\b(?i)(GIR\s?0AA|[A-PR-UWYZ][A-HK-Y]?\d[\dA-HJKSTUW]?\s?\d[ABD-HJLNP-UW-Z]{2})\b
+```
+
+2. Register the rule in config files:
+
+- `configs/philter_delta.json`
+- `philter_ucsf/configs/philter_delta.json`
+
+Use a regex rule entry like:
+
+```json
+{
+	"title": "uk postcode",
+	"type": "regex",
+	"exclude": true,
+	"filepath": "filters/regex/addresses/uk_postcode_transformed.txt",
+	"notes": "This should remove UK postcodes such as BD5 8JT or LS11 4RF"
+}
+```
+
+3. Re-run redaction:
+
+```powershell
+.\.venv\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
+```
+
+4. Verify postcodes are fully masked:
+
+```powershell
+Select-String -Path .\data\redacted_out\sample_clinical_notes_sensitive.txt -Pattern '8JT|4RF|6PL|BD5|LS11|M14'
+```
+
+Expected result: no matches.
 
 ### OCR notes
 

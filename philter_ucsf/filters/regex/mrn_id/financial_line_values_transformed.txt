@@ -1,0 +1,1 @@
+(?im)(?<=^Private Insurance Provider:\s).+$|(?<=^Policy Number:\s).+$|(?<=^Claim Reference:\s).+$|(?<=^Bank Sort Code:\s).+$|(?<=^Partial Account Number:\s).+$|(?<=^Outstanding Balance:\s).+$

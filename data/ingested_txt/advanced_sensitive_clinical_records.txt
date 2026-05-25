@@ -1,0 +1,113 @@
+Comprehensive Clinical Records with Sensitive Information
+CONFIDENTIAL PATIENT RECORD
+Patient Name: Jonathan Michael Hayes
+Date of Birth: 17/08/1969
+NHS Number: 841 229 7701
+National Insurance: QQ 12 34 56 C
+Hospital Number: HSP-992174
+Address: 104 Millstone Avenue, Bradford BD7 4RQ
+Phone: 07944 221177
+Email: jonathan.hayes1969@privatemail.co.uk
+Occupation: Mechanical Engineer
+Employer: West Yorkshire Industrial Systems Ltd.
+Emergency Contact: Angela Hayes - Wife - 07888 441122
+Past Medical History:
+- Type 2 Diabetes Mellitus
+- Chronic Kidney Disease Stage 2
+- Hypertension
+- Obstructive Sleep Apnoea
+- Hypercholesterolaemia
+Current Medications:
+- Metformin 1000mg twice daily
+- Insulin Glargine 28 units nightly
+- Ramipril 10mg daily
+- Atorvastatin 40mg nightly
+- Aspirin 75mg daily
+- Omeprazole 20mg daily
+- Sertraline 50mg daily
+- Salbutamol inhaler PRN
+Allergies:
+Penicillin (anaphylaxis), Codeine (rash)
+Clinical Note:
+Patient attended diabetic review clinic reporting worsening peripheral neuropathy and intermittent blurred vision. Recent
+HbA1c measured at 10.4%. Blood pressure 168/98 mmHg. Weight 108kg, BMI 34.2.
+Investigations:
+Creatinine: 118 umol/L
+eGFR: 62 mL/min
+Urine ACR: Elevated
+ECG: Sinus rhythm with left ventricular hypertrophy.
+Plan:
+Increase insulin dose gradually to 34 units nightly. Refer to retinal screening service and nephrology clinic. Arrange
+diabetic foot assessment within 2 weeks.
+Consultant: Dr. Eleanor Bishop, GMC 6159022
+
+MENTAL HEALTH ASSESSMENT LETTER
+Patient: Rebecca Louise Turner
+Date of Birth: 03/02/1987
+NHS Number: 520 664 9022
+Address: Flat 6, Kingsway Apartments, Leeds LS2 8PQ
+Mobile: 07711 904422
+Email: rebecca.turner87@securemail.uk
+Marital Status: Divorced
+Next of Kin: Susan Turner (Mother) - 07555 663399
+Presenting Complaint:
+Patient referred following episodes of severe anxiety, panic attacks, insomnia, and depressive symptoms lasting
+approximately 8 months.
+Psychiatric History:
+Previous diagnosis of Generalised Anxiety Disorder and recurrent depressive disorder. One previous psychiatric
+admission in 2021 following overdose attempt.
+Current Medications:
+- Venlafaxine XR 225mg daily
+- Diazepam 5mg PRN up to TDS
+- Zopiclone 7.5mg nightly
+- Propranolol 40mg twice daily
+Social History:
+Lives alone. Reports significant alcohol intake on weekends and intermittent cannabis use. Currently signed off work
+from role as HR manager.
+Risk Assessment:
+Passive suicidal ideation reported without active plan. No psychotic symptoms identified.
+Management Plan:
+Urgent referral to community mental health team. Weekly psychological therapy sessions recommended. Safety
+planning discussed extensively.
+Prepared By: Dr. Imran Siddiqui, Consultant Psychiatrist
+
+Medication Administration & Sensitive Data Sheet
+Medication
+Dose
+Frequency
+Prescriber
+Morphine Sulfate
+10mg
+Every 4 hrs PRN
+Dr. Helen Morris
+Warfarin
+5mg
+Once daily
+Dr. Alan Price
+Levothyroxine
+75mcg
+Morning
+Dr. Rachel Singh
+Pregabalin
+150mg
+Twice daily
+Dr. Omar Patel
+Clonazepam
+1mg
+Nightly
+Dr. Imran Siddiqui
+Oxycodone
+20mg
+Twice daily
+Dr. Helen Morris
+Insurance & Billing Information
+Private Insurance Provider: NorthCare Health Insurance
+Policy Number: NCHI-7782-44219-UK
+Claim Reference: CLM-2026-883174
+Bank Sort Code: 20-84-11
+Partial Account Number: XXXX4421
+Outstanding Balance: £1,842.50
+Additional Confidential Notes:
+Patient disclosed previous opioid dependency treated in 2019. History of missed follow-up appointments and medication
+misuse concerns documented.
+Authorised Clinician Signature: Dr. Martin Fletcher

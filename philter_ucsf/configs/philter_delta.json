@@ -197,6 +197,13 @@
         "notes":"This should remove anything with pattern balance"
     },
     {
+        "title":"financial labels safe",
+        "type":"regex",
+        "exclude":false,
+        "filepath":"filters/regex/safe/financial_labels_safe.txt",
+        "notes":"Preserve billing/financial label text while allowing value redaction"
+    },
+    {
         "title":"barretts esophagus safe",
         "type":"regex",
         "exclude":false,
@@ -1059,6 +1066,13 @@
         "filepath":"filters/regex/addresses/city_zip_transformed.txt",
         "notes":"This should remove anything that has a city name, followed by a zip code"
     },
+    {
+        "title":"uk postcode",
+        "type":"regex",
+        "exclude":true,
+        "filepath":"filters/regex/addresses/uk_postcode_transformed.txt",
+        "notes":"This should remove UK postcodes such as BD5 8JT or LS11 4RF"
+    },
 
     {
         "title":"lives in",
@@ -1657,6 +1671,34 @@
         "exclude":true,
         "filepath":"filters/regex/mrn_id/account_#.txt",
         "notes":"This should remove anything that matches account #"
+    },
+    {
+        "title":"uk national insurance number",
+        "type":"regex",
+        "exclude":true,
+        "filepath":"filters/regex/mrn_id/uk_national_insurance_number_transformed.txt",
+        "notes":"This should remove UK national insurance numbers"
+    },
+    {
+        "title":"financial identifiers",
+        "type":"regex",
+        "exclude":true,
+        "filepath":"filters/regex/mrn_id/financial_identifiers_transformed.txt",
+        "notes":"This should remove policy, claim, sort code, and account identifiers"
+    },
+    {
+        "title":"financial amounts",
+        "type":"regex",
+        "exclude":true,
+        "filepath":"filters/regex/mrn_id/financial_amounts_transformed.txt",
+        "notes":"This should remove currency-denominated monetary values"
+    },
+    {
+        "title":"financial line values",
+        "type":"regex",
+        "exclude":true,
+        "filepath":"filters/regex/mrn_id/financial_line_values_transformed.txt",
+        "notes":"This should remove full values on common financial identifier lines"
     },
     {
         "title":"accession #",
