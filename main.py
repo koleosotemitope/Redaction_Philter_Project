@@ -2,12 +2,61 @@ import argparse
 import distutils.util
 import re 
 import pickle
+import textwrap
+from pathlib import Path
 from philter import Philter
 import gzip
 import json
 
 
 def main():
+    def _write_text_to_pdf(text: str, output_pdf: Path) -> None:
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.units import inch
+            from reportlab.pdfgen import canvas
+        except ImportError as exc:
+            raise ImportError(
+                "PDF export requires reportlab. Install with: pip install reportlab"
+            ) from exc
+
+        page_width, page_height = letter
+        margin_left = 0.75 * inch
+        margin_top = 0.75 * inch
+        margin_bottom = 0.75 * inch
+        line_height = 12
+        wrap_width = 105
+
+        pdf = canvas.Canvas(str(output_pdf), pagesize=letter)
+        pdf.setFont("Courier", 10)
+
+        y = page_height - margin_top
+        for raw_line in text.splitlines():
+            wrapped_lines = textwrap.wrap(raw_line, width=wrap_width) or [""]
+            for line in wrapped_lines:
+                if y <= margin_bottom:
+                    pdf.showPage()
+                    pdf.setFont("Courier", 10)
+                    y = page_height - margin_top
+                pdf.drawString(margin_left, y, line)
+                y -= line_height
+
+        pdf.save()
+
+    def _export_output_txts_to_pdf(output_dir: str) -> int:
+        out_path = Path(output_dir)
+        if not out_path.exists() or not out_path.is_dir():
+            return 0
+
+        converted = 0
+        for txt_file in sorted(out_path.glob("*.txt")):
+            text = txt_file.read_text(encoding="utf-8", errors="replace")
+            pdf_file = txt_file.with_suffix(".pdf")
+            _write_text_to_pdf(text, pdf_file)
+            converted += 1
+
+        return converted
+
     # get input/output/filename
     help_str = """ Philter -- PHI filter for clinical notes """
     ap = argparse.ArgumentParser(description=help_str)
@@ -56,6 +105,9 @@ def main():
     ap.add_argument("--cachepos", default=None,
                     help="Path to a directoy to store/load the pos data for all notes. If no path is specified then memory caching will be used.",
                     type=str)
+    ap.add_argument("--pdf_output", default=False,
+                    help="When true, creates PDF copies for redacted .txt outputs in the output directory.",
+                    type=lambda x:bool(distutils.util.strtobool(x)))
 
     args = ap.parse_args()
     run_eval = args.run_eval
@@ -106,6 +158,16 @@ def main():
     #transform the data 
     #Priority order is maintained in the pattern list
     filterer.transform()
+
+    if args.pdf_output:
+        if args.outputformat != "asterisk":
+            print("Skipping PDF export: --pdf_output expects --outputformat asterisk (text output).")
+        else:
+            try:
+                converted_count = _export_output_txts_to_pdf(args.output)
+                print(f"PDF export complete. Created {converted_count} PDF file(s) in {args.output}")
+            except Exception as exc:
+                print(f"PDF export failed: {exc}")
 
     #evaluate the effectiveness
     if run_eval and args.outputformat == "asterisk":

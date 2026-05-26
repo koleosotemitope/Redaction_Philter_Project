@@ -26,6 +26,29 @@ To install the Python requirements, run the following command:
 pip3 install -r requirements.txt
 ```
 
+## GUI PDF Redaction (Streamlit)
+
+Run a local Streamlit GUI to upload PDFs, redact with Philter, and get PDF outputs.
+
+Install GUI dependencies:
+
+```bash
+pip3 install -r requirements_gui.txt
+```
+
+Windows (recommended):
+
+```powershell
+python.exe -m pip install -r requirements_gui.txt
+python.exe -m streamlit run gui_pdf_redactor.py
+```
+
+The app lets you:
+- Upload one or more PDF files.
+- Run PHI redaction using your filter config.
+- Download individual redacted PDFs or a ZIP.
+- Save generated PDFs to `data/redacted_out_pdf/`.
+
 # Running Philter: A Step-by-Step Guide
 
 Philter is a command-line based clinical text de-identification software that removes protected health information (PHI) from any plain text file. Although the software has built-in evaluation capabilities and can compare Philter PHI-reduced notes with a corresponding set of ground truth annotations, annotations are not required to run Philter. The following steps may be used to 1) run Philter in the command line without ground truth annotations, or 2) generate Philter-compatible annotations and run Philter in evaluation mode using ground truth annotations. Although any set of notes and corresponding annotations may be used with Philter, the examples provided here will correspond to the I2B2 dataset, which Philter uses in its default configuration. 

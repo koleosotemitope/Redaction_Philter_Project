@@ -1,0 +1,28 @@
+Medication Administration & Sensitive Data Sheet
+Medication
+Dose
+Frequency
+Prescriber
+Morphine Sulfate
+10mg
+Every * *** ***
+*** - Helen Morris
+Warfarin
+5mg
+Once daily
+Dr. Alan Price
+Levothyroxine
+75mcg
+Morning
+Dr. Rachel Singh
+Pregabalin
+150mg
+Twice daily
+Dr. Omar Patel
+Clonazepam
+1mg
+Nightly
+Dr. Imran Siddiqui
+Oxycodone
+20mg
+Twice daily

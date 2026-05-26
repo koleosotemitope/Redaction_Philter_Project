@@ -1,0 +1,5 @@
+-r requirements.txt
+-r requirements_ocr.txt
+streamlit>=1.36.0
+reportlab>=4.2.0
+pymupdf>=1.24.0
