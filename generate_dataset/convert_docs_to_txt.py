@@ -1,6 +1,69 @@
 import argparse
+import re
+from html import unescape
 from pathlib import Path
 from typing import List, Tuple
+
+
+def read_docx_text(path: Path) -> Tuple[str, str]:
+    """Extract text from a DOCX file using python-docx."""
+    try:
+        from docx import Document  # type: ignore
+    except Exception:
+        return "", "missing python-docx"
+
+    try:
+        doc = Document(str(path))
+        chunks: List[str] = []
+        for para in doc.paragraphs:
+            if para.text.strip():
+                chunks.append(para.text)
+        text = "\n".join(chunks).strip()
+        return text, "ok" if text else "empty"
+    except Exception as exc:
+        return "", f"docx parse error: {exc}"
+
+
+def read_doc_text(path: Path) -> Tuple[str, str]:
+    """Extract text from a DOC file using python-docx (newer .doc files) or fallback to OCR."""
+    try:
+        from docx import Document  # type: ignore
+    except Exception:
+        return "", "missing python-docx"
+
+    try:
+        doc = Document(str(path))
+        chunks: List[str] = []
+        for para in doc.paragraphs:
+            if para.text.strip():
+                chunks.append(para.text)
+        text = "\n".join(chunks).strip()
+        return text, "ok" if text else "empty"
+    except Exception as exc:
+        return "", f"doc parse error: {exc}"
+
+
+def read_html_text(path: Path) -> Tuple[str, str]:
+    """Extract readable text from an HTML/HTM file without extra dependencies."""
+    try:
+        raw = path.read_text(encoding="utf-8", errors="replace")
+    except Exception as exc:
+        return "", f"html read error: {exc}"
+
+    try:
+        cleaned = re.sub(r"(?is)<(script|style)\b.*?>.*?</\1>", " ", raw)
+        cleaned = re.sub(r"(?is)<br\s*/?>", "\n", cleaned)
+        cleaned = re.sub(r"(?is)</p\s*>", "\n", cleaned)
+        cleaned = re.sub(r"(?is)<[^>]+>", " ", cleaned)
+        cleaned = unescape(cleaned)
+        cleaned = re.sub(r"\r\n?", "\n", cleaned)
+        cleaned = re.sub(r"[ \t]+", " ", cleaned)
+        cleaned = re.sub(r"\n\s+", "\n", cleaned)
+        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+        text = cleaned.strip()
+        return text, "ok" if text else "empty"
+    except Exception as exc:
+        return "", f"html parse error: {exc}"
 
 
 def read_pdf_text(path: Path) -> Tuple[str, str]:
@@ -57,7 +120,7 @@ def ocr_image(path: Path) -> Tuple[str, str]:
 
 
 def collect_files(input_path: Path, recursive: bool) -> List[Path]:
-    exts = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
+    exts = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".html", ".htm"}
     if input_path.is_file():
         return [input_path] if input_path.suffix.lower() in exts else []
 
@@ -74,6 +137,8 @@ def convert_one(path: Path, out_dir: Path) -> Tuple[bool, str, Path]:
         text, status = read_pdf_text(path)
         if not text:
             text, status = ocr_pdf(path)
+    elif suffix in {".html", ".htm"}:
+        text, status = read_html_text(path)
     else:
         text, status = ocr_image(path)
 
@@ -87,13 +152,13 @@ def convert_one(path: Path, out_dir: Path) -> Tuple[bool, str, Path]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Convert PDF and image files into plain text files for Philter input."
+        description="Convert PDF, HTML, and image files into plain text files for Philter input."
     )
     parser.add_argument(
         "-i",
         "--input",
         required=True,
-        help="Input file or directory containing PDF/JPEG/PNG/etc.",
+        help="Input file or directory containing PDF/HTML/JPEG/PNG/etc.",
     )
     parser.add_argument(
         "-o",
@@ -122,7 +187,7 @@ def main() -> int:
 
     files = collect_files(input_path, recursive=not args.no_recursive)
     if not files:
-        print("No supported files found. Supported: .pdf, .png, .jpg, .jpeg, .tif, .tiff, .bmp")
+        print("No supported files found. Supported: .pdf, .html, .htm, .png, .jpg, .jpeg, .tif, .tiff, .bmp")
         return 1
 
     ok_count = 0

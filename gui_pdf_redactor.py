@@ -13,7 +13,14 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 
-from generate_dataset.convert_docs_to_txt import ocr_pdf, read_pdf_text
+from generate_dataset.convert_docs_to_txt import (
+    ocr_image,
+    ocr_pdf,
+    read_html_text,
+    read_pdf_text,
+    read_docx_text,
+    read_doc_text,
+)
 from philter import Philter
 
 
@@ -62,7 +69,12 @@ def write_text_to_pdf(text: str, output_pdf: Path) -> None:
 def render_pdf_preview_pages(pdf_bytes: bytes, max_pages: int = 2) -> list[dict]:
     try:
         import fitz  # type: ignore
-    except Exception:
+    except Exception as e:
+        print(f"[DEBUG] fitz import failed: {e}")
+        return []
+
+    if not pdf_bytes:
+        print(f"[DEBUG] pdf_bytes is empty")
         return []
 
     previews: list[dict] = []
@@ -79,7 +91,11 @@ def render_pdf_preview_pages(pdf_bytes: bytes, max_pages: int = 2) -> list[dict]
                 }
             )
         doc.close()
-    except Exception:
+        print(f"[DEBUG] Generated {len(previews)} preview pages successfully")
+    except Exception as e:
+        print(f"[DEBUG] PDF preview rendering failed: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
     return previews
@@ -107,15 +123,18 @@ def build_layout_preview_pdf(
 ) -> bytes | None:
     try:
         import fitz  # type: ignore
-    except Exception:
+    except Exception as e:
+        print(f"[DEBUG] fitz import failed in layout preview: {e}")
         return None
 
     if not original_pdf_bytes or not original_text or not redacted_text:
+        print(f"[DEBUG] Missing input: pdf_bytes={bool(original_pdf_bytes)}, orig_text={bool(original_text)}, redacted_text={bool(redacted_text)}")
         return None
 
     max_len = min(len(original_text), len(redacted_text))
     starred_indices = {i for i in range(max_len) if redacted_text[i] == "*" and not original_text[i].isspace()}
     if not starred_indices:
+        print(f"[DEBUG] No redacted regions found (no asterisks)")
         return None
 
     candidate_terms: set[str] = set()
@@ -127,9 +146,11 @@ def build_layout_preview_pdf(
                 candidate_terms.add(term)
 
     if not candidate_terms:
+        print(f"[DEBUG] No candidate redaction terms found")
         return None
 
     terms_to_redact = sorted(candidate_terms, key=len, reverse=True)
+    print(f"[DEBUG] Attempting to redact {len(terms_to_redact)} terms in layout preview")
     try:
         doc = fitz.open(stream=original_pdf_bytes, filetype="pdf")
         for page in doc:
@@ -140,10 +161,454 @@ def build_layout_preview_pdf(
 
         out_bytes = doc.tobytes()
         doc.close()
+        print(f"[DEBUG] Layout preview PDF generated successfully ({len(out_bytes)} bytes)")
         return out_bytes
-    except Exception:
+    except Exception as e:
+        print(f"[DEBUG] Layout preview PDF generation failed: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
+
+# ── Body-aware redaction helpers ─────────────────────────────────────────────
+
+# Section headings that mark the start of the narrative body in clinical notes.
+BODY_SECTION_MARKERS = [
+    r"^Clinical Note[s]?:",
+    r"^Presenting Complaint[s]?:",
+    r"^History of Present Illness:",
+    r"^History:",
+    r"^Assessment:",
+    r"^Subjective:",
+    r"^Chief Complaint:",
+    r"^Progress Note:",
+    r"^Consultation Note:",
+    r"^Letter Body:",
+]
+
+# ── Body PHI patterns (HIPAA Safe Harbor + NHS/UK equivalents) ───────────────
+# Each entry: (regex_pattern, replacement_text, re_flags)
+# Patterns are applied in order; more-specific patterns come first.
+
+_BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
+
+    # ── PATIENT / CONTACT NAMES — run FIRST so labels are intact ─────────────
+    # Expanded label list; uses [ \t]+ (not \s+) to avoid crossing line breaks.
+    (
+        r"(?:Patient(?:[ \t]+Name)?|Full[ \t]+Name|Name|Next[ \t]+of[ \t]+Kin|"
+        r"Emergency[ \t]+Contact|Family[ \t]+Member|Relative|Carer|Guardian|"
+        r"Referred[ \t]+by|Author|Dictated[ \t]+by|Signed[ \t]+by|"
+        r"Consultant|Clinician|Attending|Nurse|Therapist|Physiotherapist|"
+        r"Pharmacist|Surgeon|Registrar|GP|Key[ \t]+Worker|Keyworker|"
+        r"Reviewed[ \t]+by|Seen[ \t]+by|Prepared[ \t]+by|Attended[ \t]+by)"
+        r"[ \t]*:[ \t]+(?:Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Mx\.?)?[ \t]*"
+        r"([A-Z][^\W\d_]+(?:[ \t]+[A-Z][^\W\d_]+){1,2})",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
+    # Honorific + Name anywhere in text  e.g.  "Mr John Smith"  "Mrs Angela Hayes"
+    (
+        r"\b(?:Mr|Mrs|Ms|Miss|Mx)\.?\s+([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})\b",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
+    # Narrative "seen/reviewed/examined/referred by [Dr] Name"
+    # (?i:...) makes only the trigger words case-insensitive; [A-Z][^\W\d_]+ is case-sensitive
+    # so medication names starting with lowercase are NOT captured.
+    (
+        r"(?i:seen\s+by|reviewed\s+by|attended\s+by|referred\s+(?:to|by)|"
+        r"examined\s+by|assessed\s+by|treated\s+by|presented\s+to|"
+        r"admitted\s+under|under\s+(?:the\s+)?care\s+of|care\s+of)"
+        r"\s+(?:Dr\.?\s+|Mr\.?\s+|Mrs\.?\s+|Ms\.?\s+)?([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})\b",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
+    # ── IDENTIFIERS ──────────────────────────────────────────────────────────
+
+    # Email addresses
+    (
+        r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b",
+        "[EMAIL]",
+        0,
+    ),
+    # URLs  http/https/www
+    (
+        r"https?://[^\s\"'<>]+|www\.[^\s\"'<>]+",
+        "[URL]",
+        0,
+    ),
+    # IP addresses  IPv4
+    (
+        r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+        "[IP]",
+        0,
+    ),
+    # US Social Security Number  XXX-XX-XXXX
+    (
+        r"\b\d{3}-\d{2}-\d{4}\b",
+        "[SSN]",
+        0,
+    ),
+    # NHS Number  841 229 7701  /  841-229-7701
+    (
+        r"\b\d{3}[\s\-]\d{3}[\s\-]\d{4}\b",
+        "[NHS-NO]",
+        0,
+    ),
+    # National Insurance (UK)  QQ 12 34 56 C
+    (
+        r"\b[A-Z]{2}\s*\d{2}\s*\d{2}\s*\d{2}\s*[A-D]\b",
+        "[NI-NO]",
+        0,
+    ),
+    # Medical / hospital record numbers — separator mandatory, PAT removed
+    (
+        r"\b(?:HSP|MRN|MR|REC|REF|ID)[\-:#]\s*[A-Z0-9]{4,12}\b",
+        "[MED-ID]",
+        0,
+    ),
+    # Insurance / member ID  labelled
+    (
+        r"(?i)(?:Insurance|Member|Policy|Plan|Group|Insurer)\s+(?:ID|No\.?|Number)[:\s]+[A-Z0-9\-]{4,20}",
+        "[INS-ID]",
+        0,
+    ),
+    # Account / billing numbers  labelled
+    (
+        r"(?i)(?:Account|Billing|Invoice|Claim|Auth(?:orisation)?)\s+(?:No\.?|Number|#)[:\s]+[A-Z0-9\-]{4,20}",
+        "[ACCT-NO]",
+        0,
+    ),
+    # Device serial numbers  e.g.  SN: ABC-123456
+    (
+        r"(?i)(?:Serial|Device|S/N|SN)[:\s#]+[A-Z0-9\-]{5,20}",
+        "[SERIAL-NO]",
+        0,
+    ),
+    # Vehicle licence plates (UK format)  AB12 CDE
+    (
+        r"\b[A-Z]{2}\d{2}\s?[A-Z]{3}\b|\b[A-Z]\d{3}\s?[A-Z]{3}\b",
+        "[REG-PLATE]",
+        0,
+    ),
+    # Dictation / transcription metadata lines
+    (
+        r"(?i)(?:Dictated|Transcribed|Signed|Authored)\s+(?:by|on)[:\s]+.+",
+        "[DICTATION-META]",
+        0,
+    ),
+
+    # ── PHONE / FAX ──────────────────────────────────────────────────────────
+    # UK mobile / landline
+    (
+        r"(?:\+44\s?|0)(?:\d[\s\-]?){9,11}\b",
+        "[PHONE]",
+        0,
+    ),
+    # US phone  (XXX) XXX-XXXX
+    (
+        r"\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4}\b",
+        "[PHONE]",
+        0,
+    ),
+
+    # ── DATES ────────────────────────────────────────────────────────────────
+    # Written dates — day-first and month-first, with optional ordinal suffixes
+    # e.g. 3 February 2024 / 19th June 2024 / Feb 21, 2024 / February 1st, 2024
+    (
+        r"(?i)\b\d{1,2}(?:st|nd|rd|th)?[\s\-]+(?:January|February|March|April|May|June|July|August"
+        r"|September|October|November|December"
+        r"|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?\s+\d{4}\b",
+        "[DATE]",
+        0,
+    ),
+    (
+        r"(?i)\b(?:January|February|March|April|May|June|July|August"
+        r"|September|October|November|December"
+        r"|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{4}\b",
+        "[DATE]",
+        0,
+    ),
+    # DD/MM/YYYY  DD-MM-YYYY  DD.MM.YYYY
+    (
+        r"\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b",
+        "[DATE]",
+        0,
+    ),
+    # Age over 89
+    (
+        r"(?i)\b(?:aged?\s+)?(?:9[0-9]|1[0-9]{2})\s*[-\s]?(?:years?\s*[-\s]?old|y\.?o\.?|yr\.?s?)\b",
+        "[AGE-OVER-89]",
+        0,
+    ),
+
+    # ── ADDRESSES ────────────────────────────────────────────────────────────
+    # Labelled address field
+    (
+        r"(?im)^(?:Address|Home\s+Address|Postal\s+Address|Correspondence\s+Address)\s*:\s*.+$",
+        "[ADDRESS]",
+        0,
+    ),
+    # "Flat N, Building Name"
+    (
+        r"(?i)\bFlat\s+\w+,\s+[A-Z][a-zA-Z\s]+(?:Apartments?|House|Building|Court|Mews|Towers?)\b",
+        "[ADDRESS]",
+        0,
+    ),
+    # Number + Street
+    (
+        r"(?i)\b\d+[A-Za-z]?\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3}"
+        r"\s+(?:Street|Road|Avenue|Lane|Drive|Close|Way|Place|Court"
+        r"|Gardens|Terrace|Crescent|Grove|Walk|Mews|Row|Square|Hill|Park|Flats?|Apartments?)\b",
+        "[ADDRESS]",
+        0,
+    ),
+    # Street-only line (no house number) in letter footers/signatures
+    (
+        r"(?im)^(?:[A-Z][^\n]{0,60})\b(?:Street|Road|Avenue|Lane|Drive|Close|Way|Place|Court"
+        r"|Gardens|Terrace|Crescent|Grove|Walk|Mews|Row|Square|Hill|Park)\b\.?$",
+        "[ADDRESS]",
+        0,
+    ),
+    # Facility line used as part of postal address block
+    (
+        r"(?im)^(?:[A-Z][^\n]{0,80})\b(?:Hospital|Infirmary|Surgery|Practice|Clinic|Centre|Center|Trust|Unit)\b[^\n]*$",
+        "[ADDRESS]",
+        0,
+    ),
+    # UK postcode
+    (
+        r"\b[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}\b",
+        "[POSTCODE]",
+        0,
+    ),
+    # US ZIP
+    (
+        r"\b\d{5}(?:-\d{4})?\b",
+        "[ZIP]",
+        0,
+    ),
+
+    # ── PROVIDER / CLINIC / EMPLOYER NAMES (label+colon required) ────────────
+    # Provider lines with initials + credentials  e.g. "Dr D Fine MD FRCP"
+    (
+        r"(?im)^\s*(?:Dr\.?|Doctor|Prof\.?|Professor)\s+(?:[A-Z]\.?\s+){1,3}[A-Z][^\W\d_]+"
+        r"(?:\s+[A-Z][^\W\d_]+)?(?:\s+(?:MD|FRCP|MRCP|MBBS|MBChB|PhD|DPhil|BSc|MSc|RN|RGN|FRCPath|FACS))*\s*$",
+        "[PROVIDER-NAME]",
+        0,
+    ),
+    # Dr / Doctor / Prof names
+    (
+        r"\b(?:Dr\.?|Doctor|Prof\.?|Professor)\s+[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+)?\b",
+        "[PROVIDER-NAME]",
+        0,
+    ),
+    # GMC / NMC registration numbers
+    (
+        r"(?i)\bGMC\s*:?\s*\d{6,8}\b|\bNMC\s*:?\s*\d{6,8}[A-Z]?\b",
+        "[REG-NO]",
+        0,
+    ),
+    # Clinic / hospital — label+colon required
+    (
+        r"(?i)(?:Referred?\s+to|Clinic|Hospital|Practice|Centre|Center|Trust|Ward)\s*:\s*"
+        r"[A-Z][a-zA-Z\s]{2,50}(?:Clinic|Hospital|Infirmary|Surgery|Practice|Centre|Center|Trust|Ward|Unit|NHS)\b",
+        "[ORG-NAME]",
+        0,
+    ),
+    # Employer — label+colon required
+    (
+        r"(?i)Employer\s*:\s*"
+        r"[A-Z][a-zA-Z0-9\s\.,&\-]{2,50}(?:Ltd\.?|plc|Inc\.?|LLC|LLP|Co\.?|Corp\.?|Systems?|Services?|Solutions?|Group|Associates?)\b",
+        "[EMPLOYER]",
+        0,
+    ),
+    # School — label+colon required
+    (
+        r"(?i)(?:School|University|College|Academy|Institute)\s*:\s*"
+        r"[A-Z][a-zA-Z\s]{2,50}(?:School|University|College|Academy|Institute)\b",
+        "[SCHOOL]",
+        0,
+    ),
+
+    # ── MISC ─────────────────────────────────────────────────────────────────
+    # Standalone initials  J.M.H.
+    (
+        r"\b[A-Z]\.(?:[A-Z]\.){1,3}",
+        "[INITIALS]",
+        0,
+    ),
+    # Uppercase names that appear after salutation markers in letters
+    (
+        r"(?m)(?:\bDear[ \t]+\[PROVIDER-NAME\][ \t]+|\bcc[ \t]*:[ \t]*|\bRe[ \t]+)"
+        r"([A-Z]{2,}(?:[ \t]+[A-Z]{2,}){1,2})\b",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+    # Identifying occupations — label+colon required
+    (
+        r"(?i)(?:Occupation|Works?\s+as|Job|Profession)\s*:\s*"
+        r"(?:local\s+mayor|mayor|MP|minister|NFL\s+player|Premier\s+League|celebrity|"
+        r"CEO|headteacher|head\s+teacher|judge|bishop|chief\s+constable)[^\n]*",
+        "[OCCUPATION-ID]",
+        0,
+    ),
+]
+
+def split_header_body(text: str, custom_marker: str = "") -> tuple[str, str, int]:
+    """Return (header_text, body_text, split_index).
+
+    The header is everything *before* the first recognised clinical section
+    heading.  The body is that heading and everything after it.
+    If no heading is found the entire text is treated as header (full philter
+    redaction) and body is empty.
+    """
+    markers = list(BODY_SECTION_MARKERS)
+    if custom_marker.strip():
+        markers.insert(0, re.escape(custom_marker.strip()))
+
+    for marker in markers:
+        m = re.search(marker, text, re.MULTILINE | re.IGNORECASE)
+        if m:
+            idx = m.start()
+            return text[:idx], text[idx:], idx
+
+    return text, "", len(text)
+
+
+def targeted_body_redact(text: str) -> str:
+    """Apply HIPAA Safe Harbor + NHS targeted redaction to body text only.
+
+    Redacts: names, initials, DOB, age >89, address, postcode/ZIP, phone/fax,
+    email, SSN, NHS/NI numbers, medical record IDs, insurance/account/billing
+    numbers, appointment/surgery dates, provider names, clinic/hospital names,
+    employer/school names, emergency contact names, device serials,
+    vehicle/licence plates, URLs, IP addresses, biometric labels,
+    identifying occupations, dictation metadata.
+
+    Everything else (clinical observations, medications, diagnoses, etc.)
+    is left in its original format.
+    """
+    for pattern, replacement, flags in _BODY_PHI_PATTERNS:
+        if callable(replacement):
+            text = re.sub(pattern, replacement, text, flags=flags)
+        else:
+            text = re.sub(pattern, replacement, text, flags=flags)
+
+    lines = text.splitlines()
+
+    # Redact person name on next line after "cc:" in letter-style layouts.
+    # Example:
+    #   cc:
+    #   Hazel Daniels
+    cc_only = re.compile(r"(?i)^cc\s*:\s*$")
+    name_line = re.compile(
+        r"^[A-Z][^\W\d_]+(?:['-][A-Z][^\W\d_]+)?"
+        r"(?:\s+[A-Z][^\W\d_]+(?:['-][A-Z][^\W\d_]+)?){1,2}$"
+    )
+    for i in range(len(lines) - 1):
+        if cc_only.match(lines[i].strip()):
+            # Skip one optional blank line between cc: and the recipient name.
+            j = i + 1
+            if j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines):
+                candidate = lines[j].strip()
+                if candidate and candidate not in {"[NAME]", "[ADDRESS]", "[POSTCODE]", "[ZIP]"}:
+                    if name_line.match(candidate):
+                        lines[j] = "[NAME]"
+
+    # Address block cleanup for letters: if an address/facility line is found,
+    # also redact the immediately following city/town line when it is a short
+    # title-cased phrase (e.g., "Southampton").
+    address_like = re.compile(
+        r"\b(?:Street|Road|Avenue|Lane|Drive|Close|Way|Place|Court|Gardens|Terrace|Crescent|"
+        r"Grove|Walk|Mews|Row|Square|Hill|Park|Hospital|Infirmary|Surgery|Practice|Clinic|"
+        r"Centre|Center|Trust|Unit|Address)\b",
+        re.IGNORECASE,
+    )
+    city_line = re.compile(r"^[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2}$")
+
+    for i in range(len(lines) - 1):
+        current = lines[i].strip()
+        nxt = lines[i + 1].strip()
+        if not nxt or nxt in {"[ADDRESS]", "[POSTCODE]", "[ZIP]"}:
+            continue
+
+        if current in {"[ADDRESS]"} and city_line.match(nxt):
+            lines[i + 1] = "[ADDRESS]"
+            continue
+
+        if current in {"[POSTCODE]", "[ZIP]", ""}:
+            continue
+
+        if address_like.search(current) and city_line.match(nxt):
+            lines[i + 1] = "[ADDRESS]"
+
+    # Inline address completion: if a line already has [ADDRESS] and [POSTCODE],
+    # collapse any remaining city/county chunks between them into [ADDRESS].
+    for i in range(len(lines)):
+        line = lines[i]
+        if "[ADDRESS]" in line and "[POSTCODE]" in line:
+            line = re.sub(
+                r"\[ADDRESS\](?:\s*,\s*[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2}){1,4}(?=\s*\.?\s*\[POSTCODE\])",
+                "[ADDRESS]",
+                line,
+            )
+        lines[i] = line
+
+    text = "\n".join(lines)
+    return text
+
+
+def run_philter_body_aware(
+    input_dir: Path,
+    output_dir: Path,
+    filters_path: Path,
+    body_marker: str = "",
+) -> None:
+    """Two-pass redaction:
+    1. Run full philter over every file (header gets full redaction).
+    2. Locate the body section in the *original* text and replace the
+       philter-redacted body with a targeted redaction (name / NHS ID /
+       dates / Dr name / address / location only).
+    """
+    # Pass 1 – full philter redaction
+    philter_config = {
+        "verbose": False,
+        "run_eval": False,
+        "finpath": str(input_dir),
+        "foutpath": str(output_dir),
+        "outformat": "asterisk",
+        "filters": str(filters_path),
+        "cachepos": None,
+    }
+    filterer = Philter(philter_config)
+    filterer.map_coordinates()
+    filterer.transform()
+
+    # Pass 2 – replace body portion with targeted output
+    for orig_txt in sorted(input_dir.glob("*.txt")):
+        redacted_file = output_dir / orig_txt.name
+        if not redacted_file.exists():
+            continue
+
+        original_text = orig_txt.read_text(encoding="utf-8", errors="replace")
+        redacted_text = redacted_file.read_text(encoding="utf-8", errors="replace")
+
+        _header_orig, body_orig, split_pos = split_header_body(original_text, body_marker)
+        if not body_orig:
+            continue  # no body detected – keep full philter output
+
+        header_redacted = redacted_text[:split_pos]
+        body_targeted = targeted_body_redact(body_orig)
+        redacted_file.write_text(header_redacted + body_targeted, encoding="utf-8")
+
+
+# ── Standard (full) philter pipeline ─────────────────────────────────────────
 
 def run_philter_on_folder(input_dir: Path, output_dir: Path, filters_path: Path) -> None:
     philter_config = {
@@ -161,14 +626,30 @@ def run_philter_on_folder(input_dir: Path, output_dir: Path, filters_path: Path)
     filterer.transform()
 
 
+# ── Targeted-only pipeline (whole document, no Philter) ──────────────────────
+
+def run_targeted_only_on_folder(input_dir: Path, output_dir: Path) -> None:
+    """Apply the targeted PHI regex patterns to the WHOLE document.
+
+    Skips Philter entirely so medications, diagnoses, lab values and ordinary
+    English words (confirmed, initially, engineer, etc.) are preserved.
+    Only items matched by ``_BODY_PHI_PATTERNS`` are replaced with placeholders.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for src in input_dir.glob("*.txt"):
+        original = src.read_text(encoding="utf-8")
+        redacted = targeted_body_redact(original)
+        (output_dir / src.name).write_text(redacted, encoding="utf-8")
+
+
 def app() -> None:
-    st.set_page_config(page_title="Philter PDF Redactor", layout="wide")
-    st.title("Philter PDF Redactor")
-    st.write("Upload PDF files, redact PHI, and download the output as PDF.")
+    st.set_page_config(page_title="Philter Document Redactor", layout="wide")
+    st.title("Philter Document Redactor")
+    st.write("Upload PDF, DOC, DOCX, HTML, TXT, or image files, redact PHI, and download the output.")
 
     uploaded_files = st.file_uploader(
-        "Upload PDF files",
-        type=["pdf"],
+        "Upload documents (PDF, DOC, DOCX, HTML, JPEG, TXT)",
+        type=["pdf", "doc", "docx", "html", "htm", "jpeg", "jpg", "txt"],
         accept_multiple_files=True,
     )
 
@@ -190,6 +671,47 @@ def app() -> None:
         value=str(DEFAULT_FILTERS),
     )
 
+    st.markdown("---")
+    redaction_mode = st.radio(
+        "Redaction mode",
+        options=[
+            "Full Philter (all PHI everywhere)",
+            "Body-aware (full in header, targeted in body)",
+            "Targeted only (whole document — preserves medications & common words)",
+        ],
+        index=2,
+        help=(
+            "**Full Philter** — original behaviour: redacts all PHI everywhere "
+            "(may also redact common/clinical words).\n\n"
+            "**Body-aware** — full Philter in the header (above 'Clinical Note:' etc.), "
+            "targeted PHI-only in the body.\n\n"
+            "**Targeted only (whole document)** — across the *entire* document only "
+            "specific PHI patterns are redacted: names, initials, DOB, age >89, "
+            "address, postcode/ZIP, phone, email, SSN, NHS/NI number, medical record ID, "
+            "insurance/billing/account numbers, dates, provider names, clinic/hospital names, "
+            "employer/school names, emergency contacts, device serials, vehicle plates, "
+            "URLs, IP addresses, identifying occupations, dictation metadata.\n"
+            "Medications, diagnoses, lab values, and everyday words (confirmed, initially, "
+            "engineer, etc.) are left untouched."
+        ),
+    )
+    body_targeted_mode = redaction_mode.startswith("Body-aware")
+    targeted_only_mode = redaction_mode.startswith("Targeted only")
+
+    body_marker_override = ""
+    if body_targeted_mode:
+        body_marker_override = st.text_input(
+            "Body section starts after (optional override)",
+            value="",
+            placeholder="e.g.  Clinical Note:  — leave blank for auto-detection",
+            help="Type the exact heading line where the narrative body begins. "
+                 "Leave blank to use auto-detection.",
+        )
+        st.caption(
+            "Header → full redaction (all PHI).  "
+            "Body → redacts only: names, NHS ID, dates, Dr names, addresses, locations."
+        )
+
     if "results" not in st.session_state:
         st.session_state["results"] = []
     if "failed" not in st.session_state:
@@ -197,9 +719,9 @@ def app() -> None:
     if "zip_bytes" not in st.session_state:
         st.session_state["zip_bytes"] = None
 
-    if st.button("Redact PDFs", type="primary"):
+    if st.button("Redact Documents", type="primary"):
         if not uploaded_files:
-            st.error("Please upload at least one PDF file.")
+            st.error("Please upload at least one document.")
             return
 
         filters_path = Path(custom_filter_path).expanduser().resolve()
@@ -234,9 +756,30 @@ def app() -> None:
                 upload_bytes = upload.getvalue()
                 pdf_path.write_bytes(upload_bytes)
 
-                text, status = read_pdf_text(pdf_path)
-                if (not text) and use_ocr_fallback:
-                    text, status = ocr_pdf(pdf_path)
+                text = ""
+                status = ""
+                file_ext = Path(safe_name).suffix.lower()
+
+                if file_ext == ".pdf":
+                    text, status = read_pdf_text(pdf_path)
+                    if (not text) and use_ocr_fallback:
+                        text, status = ocr_pdf(pdf_path)
+                elif file_ext == ".docx":
+                    text, status = read_docx_text(pdf_path)
+                elif file_ext == ".doc":
+                    text, status = read_doc_text(pdf_path)
+                elif file_ext == ".txt":
+                    try:
+                        text = pdf_path.read_text(encoding="utf-8", errors="replace").strip()
+                        status = "ok" if text else "empty"
+                    except Exception as exc:
+                        text, status = "", f"txt read error: {exc}"
+                elif file_ext in [".html", ".htm"]:
+                    text, status = read_html_text(pdf_path)
+                elif file_ext in [".jpeg", ".jpg", ".png", ".bmp", ".tiff", ".tif"]:
+                    text, status = ocr_image(pdf_path)
+                else:
+                    text, status = "", f"unsupported file type: {file_ext}"
 
                 if not text:
                     st.session_state["failed"].append(
@@ -256,12 +799,24 @@ def app() -> None:
 
             if any(ingested_txt_dir.glob("*.txt")):
                 try:
-                    run_philter_on_folder(ingested_txt_dir, redacted_txt_dir, filters_path)
+                    if targeted_only_mode:
+                        run_targeted_only_on_folder(ingested_txt_dir, redacted_txt_dir)
+                    elif body_targeted_mode:
+                        run_philter_body_aware(
+                            ingested_txt_dir,
+                            redacted_txt_dir,
+                            filters_path,
+                            body_marker=body_marker_override,
+                        )
+                    else:
+                        run_philter_on_folder(ingested_txt_dir, redacted_txt_dir, filters_path)
                 except Exception as exc:
                     st.error(f"Philter redaction failed: {exc}")
                     return
             else:
-                st.warning("No files were successfully extracted to text, so no redaction was run.")
+                st.error("No files were successfully extracted to text — no redaction was run.")
+                for f in st.session_state["failed"]:
+                    st.warning(f"\u274c {f['file']}: {f['reason']}")
                 return
 
             for redacted_txt_file in sorted(redacted_txt_dir.glob("*.txt")):
@@ -284,6 +839,14 @@ def app() -> None:
 
                 original_previews = render_pdf_preview_pages(original_pdf_bytes, max_pages=preview_pages) if original_pdf_bytes else []
                 redacted_previews = render_pdf_preview_pages(pdf_bytes, max_pages=preview_pages)
+
+                st.info(
+                    f"Debug for `{original_pdf_name}`: "
+                    f"original_pdf_bytes={len(original_pdf_bytes)}, "
+                    f"redacted_pdf_bytes={len(pdf_bytes)}, "
+                    f"original_previews={len(original_previews)}, "
+                    f"redacted_previews={len(redacted_previews)}"
+                )
 
                 st.session_state["results"].append(
                     {
