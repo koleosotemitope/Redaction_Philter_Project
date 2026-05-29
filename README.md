@@ -26,9 +26,9 @@ To install the Python requirements, run the following command:
 pip3 install -r requirements.txt
 ```
 
-## GUI PDF Redaction (Streamlit)
+## GUI Document Redaction (Streamlit)
 
-Run a local Streamlit GUI to upload PDFs, redact with Philter, and get PDF outputs.
+Run a local Streamlit GUI to upload documents, redact PHI, and download PDF outputs.
 
 Install GUI dependencies:
 
@@ -39,14 +39,18 @@ pip3 install -r requirements_gui.txt
 Windows (recommended):
 
 ```powershell
-python.exe -m pip install -r requirements_gui.txt
-python.exe -m streamlit run gui_pdf_redactor.py
+.\.venv311\Scripts\python.exe -m pip install -r requirements_gui.txt
+.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py
 ```
 
 The app lets you:
-- Upload one or more PDF files.
+- Upload one or more files in these formats: `PDF`, `DOC`, `DOCX`, `HTML/HTM`, `TXT`, `JPEG/JPG`.
+- Choose redaction mode:
+	- Full Philter (all PHI everywhere)
+	- Body-aware (full in header + targeted in body)
+	- Targeted-only (whole document, preserves medications/common words)
 - Run PHI redaction using your filter config.
-- Download individual redacted PDFs or a ZIP.
+- Download individual redacted PDFs or a ZIP bundle.
 - Save generated PDFs to `data/redacted_out_pdf/`.
 
 # Running Philter: A Step-by-Step Guide
@@ -98,9 +102,9 @@ python3 main.py -i ./data/i2b2_notes/ -o ./data/i2b2_results/ -f ./configs/philt
 ```
 IMPORTANT NOTE: XML-formatted files do NOT have PHI-reduced text. Instead, they contain the original note text with the PHI tags identified by Philter. 
 
-### Optional: Convert PDF/Images to Plain Text First
+### Optional: Convert PDF/HTML/Images to Plain Text First
 
-Philter processes plain text notes. If your source files are PDF/JPEG/PNG/TIFF/BMP, convert them to `.txt` first:
+Philter processes plain text notes. If your source files are PDF/HTML/JPEG/PNG/TIFF/BMP, convert them to `.txt` first:
 
 ```bash
 pip3 install -r requirements_ocr.txt
@@ -116,6 +120,7 @@ python3 main.py -i ./data/ingested_txt/ -o ./data/i2b2_results/ -f ./configs/phi
 Notes:
 - For image OCR, install system Tesseract OCR and ensure it is available on PATH.
 - For PDFs, the converter first tries native text extraction and falls back to OCR when needed.
+- For HTML/HTM, tags are stripped and readable text is extracted.
 
 If you'd like to output ONLY the PHI-reduced text with asterisks obscuring Philter-identified PHI, simply add the -outputformat "asterisk" option:
 ```bash
@@ -176,7 +181,7 @@ This is the fastest end-to-end workflow for this repo, from raw files to redacte
 2. Install base runtime dependencies:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv311\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 What this does: installs core Philter packages used by `main.py`.
@@ -184,12 +189,12 @@ What this does: installs core Philter packages used by `main.py`.
 3. Install OCR/PDF conversion dependencies:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements_ocr.txt
+.\.venv311\Scripts\python.exe -m pip install -r requirements_ocr.txt
 ```
 
 What this does: installs `pytesseract`, `pdf2image`, and related packages used by `generate_dataset/convert_docs_to_txt.py`.
 
-Important: use `\.venv\Scripts\python.exe` for all commands below to avoid interpreter mismatch.
+Important: use `.\.venv311\Scripts\python.exe` for all commands below to avoid interpreter mismatch.
 
 ### B. If your input is already text (`.txt`)
 
@@ -210,7 +215,7 @@ What this does: ensures the output path exists (Philter expects it to exist).
 3. Run redaction:
 
 ```powershell
-.\.venv\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
+.\.venv311\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
 ```
 
 What this does:
@@ -220,7 +225,7 @@ What this does:
 - `--prod=True`: production redaction run
 - `--outputformat asterisk`: masks detected sensitive text with `*`
 
-### C. If your input is PDF/image
+### C. If your input is PDF/HTML/image
 
 1. Put source files in:
 
@@ -231,7 +236,7 @@ What this does:
 2. Convert to text:
 
 ```powershell
-.\.venv\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py -i .\data\raw_docs\ -o .\data\ingested_txt\
+.\.venv311\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py -i .\data\raw_docs\ -o .\data\ingested_txt\
 ```
 
 What this does: extracts text from PDFs/images and writes `.txt` files to `./data/ingested_txt/`.
@@ -239,7 +244,7 @@ What this does: extracts text from PDFs/images and writes `.txt` files to `./dat
 3. Run the same redaction command from section B:
 
 ```powershell
-.\.venv\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
+.\.venv311\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
 ```
 
 ### D. Verify results quickly
@@ -315,13 +320,13 @@ FAIL ... (missing pdf2image/pytesseract)
 Fix:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements_ocr.txt
+.\.venv311\Scripts\python.exe -m pip install -r requirements_ocr.txt
 ```
 
 Also ensure you run the correct script path:
 
 ```powershell
-.\.venv\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py ...
+.\.venv311\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py ...
 ```
 
 ### Error: Filepath does not exist for output directory
@@ -349,7 +354,7 @@ LookupError: Resource averaged_perceptron_tagger not found
 Fix:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "import nltk; nltk.download('averaged_perceptron_tagger')"
+.\.venv311\Scripts\python.exe -c "import nltk; nltk.download('averaged_perceptron_tagger')"
 ```
 
 ### Error: re.error global flags not at the start of the expression
@@ -411,7 +416,7 @@ Use a regex rule entry like:
 3. Re-run redaction:
 
 ```powershell
-.\.venv\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
+.\.venv311\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
 ```
 
 4. Verify postcodes are fully masked:
@@ -426,3 +431,114 @@ Expected result: no matches.
 
 - For scanned PDFs/images, install system Tesseract OCR and ensure `tesseract` is available on PATH.
 - For text-native PDFs, conversion often succeeds without OCR fallback.
+
+---
+
+## 5. Git Quick Start (This Repo)
+
+Use these commands to save all your work to Git from the repository root:
+
+```powershell
+cd C:\Users\koleot\Downloads\redaction_phil\Redaction_Philter_Project
+git status
+git add .
+git commit -m "Update redaction GUI, patterns, and README"
+git push
+```
+
+Useful checks:
+
+```powershell
+git rev-parse --show-toplevel
+git log --oneline -n 5
+```
+
+If Git asks for your identity on first commit:
+
+```powershell
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+---
+
+## 6. Teammate Setup and Run Checklist (Copy/Paste)
+
+Use this section when another user clones the repo and wants the same behavior.
+
+### A. Clone and enter project folder
+
+```powershell
+git clone <YOUR_REPO_URL>
+cd Redaction_Philter_Project
+```
+
+### B. Create Python 3.11 virtual environment
+
+```powershell
+py -3.11 -m venv .venv311
+```
+
+### C. Install dependencies
+
+```powershell
+.\.venv311\Scripts\python.exe -m pip install --upgrade pip
+.\.venv311\Scripts\python.exe -m pip install -r requirements_gui.txt
+```
+
+### D. Download required NLTK model (one-time)
+
+```powershell
+.\.venv311\Scripts\python.exe -c "import nltk; nltk.download('averaged_perceptron_tagger')"
+```
+
+### E. Optional OCR prerequisite (for scanned PDFs/images)
+
+Install system Tesseract OCR and ensure `tesseract` is available on PATH.
+
+### F. Run the Streamlit app
+
+```powershell
+cd C:\Users\<USER>\...\Redaction_Philter_Project
+.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py
+```
+
+Open: `http://localhost:8501`
+
+### G. Supported input formats in GUI
+
+- PDF
+- DOC / DOCX
+- HTML / HTM
+- TXT
+- JPEG / JPG (and other image OCR formats already supported in converter)
+
+### H. Available redaction modes
+
+- Full Philter (all PHI everywhere)
+- Body-aware (full in header, targeted in body)
+- Targeted only (whole document; preserves medications/common words while redacting configured PHI patterns)
+
+### I. Quick sanity test after setup
+
+Create/upload a small sample containing:
+
+- `Hazel Daniels`
+- `February 1st, 2024`
+- `Shirley Road, Southampton SO14 7AA`
+- a medication phrase such as `Metformin 1000mg daily`
+
+Expected in targeted-only mode:
+
+- name redacted
+- date redacted
+- full address/postcode redacted
+- medication phrase preserved
+
+### J. Common run mistakes
+
+- Wrong: `..venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py`
+- Correct: `.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py`
+
+- Wrong folder: running from parent directory without project path
+- Correct: run from `Redaction_Philter_Project` root (or provide full relative paths)
