@@ -202,14 +202,14 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"Pharmacist|Surgeon|Registrar|GP|Key[ \t]+Worker|Keyworker|"
         r"Reviewed[ \t]+by|Seen[ \t]+by|Prepared[ \t]+by|Attended[ \t]+by)"
         r"[ \t]*:[ \t]+(?:Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Mx\.?)?[ \t]*"
-        r"([A-Z][^\W\d_]+(?:[ \t]+[A-Z][^\W\d_]+){1,2})",
+        r"((?:(?:[A-Z]\.?(?:[ \t]+|$)){1,3}[A-Z][A-Za-z'\-]+)|(?:[A-Z][^\W\d_]+(?:[ \t]+[A-Z][^\W\d_]+){1,2})|(?:[A-Z][^\W\d_]*[ \t]+[A-Z]\.?(?:[ \t]+[A-Z][A-Za-z'\-]+)+))",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
         0,
     ),
 
     # Honorific + Name anywhere in text  e.g.  "Mr John Smith"  "Mrs Angela Hayes"
     (
-        r"\b(?:Mr|Mrs|Ms|Miss|Mx)\.?\s+([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})\b",
+        r"\b(?:Mr|Mrs|Ms|Miss|Mx)\.?\s+((?:(?:[A-Z]\.?(?:\s+|$)){1,3}[A-Z][^\W\d_]+)|(?:[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2}))\b",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
         0,
     ),
@@ -217,8 +217,17 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
     # Nurse / Sister title + name
     (
         r"\b(?:Sister|Senior\s+Sister|Nurse|Staff\s+Nurse|Charge\s+Nurse|Matron)\s+"
-        r"([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})\b",
+        r"((?:(?:[A-Z]\.?(?:\s+|$)){1,3}[A-Z][A-Za-z'\-]+)|(?:[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})|(?:[A-Z][^\W\d_]*\s+[A-Z]\.?(?:\s+[A-Z][A-Za-z'\-]+)+))\b",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
+    # Names on the line after common labels
+    (
+        r"(?im)^((?:Seen\s+By|Reviewed\s+By|Prepared\s+By|Responsible\s+Consultant|"
+        r"Consultant(?:\s+Surgeons?)?|Nurse|Sister)\s*)\r?\n(\s*)"
+        r"((?:(?:[A-Z]\.?(?:\s+|$)){1,4}[A-Z][A-Z'\-]+)|(?:[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,3})|(?:[A-Z][^\W\d_]*\s+[A-Z]\.?(?:\s+[A-Z][A-Z'\-]+)+))\s*$",
+        lambda m: m.group(1) + "\n" + m.group(2) + "[NAME]",
         0,
     ),
 
@@ -240,7 +249,13 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"\b([A-Z][a-z]{2,})\b(?=\s+(?:has|had|have|was|were|is|are|will|would|can|could|"
         r"did|does|reports?|reported|states?|stated|presented|attended|reviewed|"
         r"informed|noted|advised|complains?|denies|continues|remains|improved|"
-        r"deteriorated|struggling|scheduled|requested|discussed|seen))",
+        r"deteriorated|struggling|scheduled|requested|discussed|seen|"
+        r"came|comes|coming|arrived|arrives|saw|sees|seeing|told|tells|telling|"
+        r"feels|felt|appears?|appeared|looks?|looked|seems?|seemed|"
+        r"explained|explains|mentioned|mentions|describes|described|"
+        r"asked|asks|wanted|wants|needs|needed|underwent|undergoes|"
+        r"started|starts|stopped|stops|received|receives|takes|took|taking|"
+        r"agreed|agrees|declined|declines|brought|brings))",
         lambda m: "[NAME]" if m.group(1).lower() not in {
             "january", "february", "march", "april", "may", "june", "july", "august",
             "september", "october", "november", "december", "monday", "tuesday",
@@ -299,6 +314,18 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"(?i)\b(?:Hospital|Patient|Inpatient|Outpatient|Ward|Admission|Episode|Case|Encounter)\s+"
         r"(?:No\.?|Number|Num\.?)(?:\s+No\.?)?\s*[:\-]?\s*([A-Z0-9]{4,12})\b",
         lambda m: m.group(0).replace(m.group(1), "[MED-ID]"),
+        0,
+    ),
+    # Patient identifier embedded in prose/reference lines
+    (
+        r"(?i)(\bpatient\s+)([A-Z0-9]{4,12})\b",
+        lambda m: m.group(1) + "[MED-ID]",
+        0,
+    ),
+    # Our Ref lines that repeat a local identifier after a slash
+    (
+        r"(?i)(\bOur\s+Ref\s*:[^\n]{0,120}?/\s*)([A-Z0-9]{4,12})\b",
+        lambda m: m.group(1) + "[MED-ID]",
         0,
     ),
     # Hospital / patient number label on one line, value on the next line
@@ -614,6 +641,24 @@ def targeted_body_redact(text: str) -> str:
                 "[ADDRESS]",
                 line,
             )
+
+        # If a line still contains trailing name tokens after a redacted marker,
+        # collapse the remainder to the same marker.
+        line = re.sub(
+            r"\[NAME\](?:\s+(?:[A-Z]\.?(?=\s|$)|[A-Z][A-Z'\-]+|[A-Z][a-z][A-Za-z'\-]*))+",
+            "[NAME]",
+            line,
+        )
+        line = re.sub(
+            r"\[PROVIDER-NAME\](?:\s+(?:[A-Z]\.?(?=\s|$)|[A-Z][A-Z'\-]+|[A-Z][a-z][A-Za-z'\-]*))+",
+            "[PROVIDER-NAME]",
+            line,
+        )
+
+        # Clean up any remaining slash-delimited local identifiers after an
+        # earlier [MED-ID] replacement on the same line.
+        line = re.sub(r"(\[MED-ID\]\s*/\s*)([A-Z0-9]{4,12})\b", r"\1[MED-ID]", line)
+
         lines[i] = line
 
     text = "\n".join(lines)
