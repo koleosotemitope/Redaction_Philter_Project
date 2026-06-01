@@ -700,15 +700,17 @@ def targeted_body_redact(text: str) -> str:
                 line,
             )
 
-        # If a line contains a redacted person/provider followed by an inline
-        # postal address and then a postcode, collapse the whole address chunk.
+        # If a line contains one or more redacted person/provider markers
+        # followed by an inline postal address and then a postcode, collapse
+        # the whole address chunk.
         line = re.sub(
-            r"(\[(?:NAME|PROVIDER-NAME)\]\s*,?\s*)(?:\d+[A-Za-z]?\s+)?"
-            r"(?:[A-Za-z][A-Za-z'\.\-/]*\s+){0,6}"
-            r"(?:Street|St\.?|Road|Rd\.?|Avenue|Ave\.?|Lane|Ln\.?|Drive|Dr\.?|Close|Way|"
-            r"Place|Court|Gardens|Terrace|Crescent|Grove|Walk|Mews|Row|Square|Hill|Park)"
-            r"(?:\s*,\s*[A-Za-z][A-Za-z'\.\-/]*(?:\s+[A-Za-z][A-Za-z'\.\-/]*){0,3}){0,3}"
-            r"\s*\.?\s*(?=\[POSTCODE\])",
+            r"((?:\[(?:NAME|PROVIDER-NAME)\]\s*){1,3},?\s*)"
+            r"(?:\d+[A-Za-z]?\s+)?"
+            r"(?:[A-Za-z0-9][A-Za-z0-9'\.\-/]*"
+            r"(?:\s+[A-Za-z0-9][A-Za-z0-9'\.\-/]*){0,3})"
+            r"(?:\s*,\s*(?:[A-Za-z0-9][A-Za-z0-9'\.\-/]*"
+            r"(?:\s+[A-Za-z0-9][A-Za-z0-9'\.\-/]*){0,3})){1,4}"
+            r"\s*\.?\s*(?=\[(?:POSTCODE|ZIP)\])",
             r"\1[ADDRESS] ",
             line,
             flags=re.IGNORECASE,
