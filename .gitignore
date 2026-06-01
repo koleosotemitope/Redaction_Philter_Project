@@ -1,1 +1,7 @@
 .DS_Store
+
+# Local document folders (input uploads and redacted output) - do not commit PHI
+data/raw_docs/
+data/ingested_txt/
+data/redacted_out/
+data/redacted_out_pdf/
