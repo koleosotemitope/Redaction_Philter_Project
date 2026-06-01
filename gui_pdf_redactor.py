@@ -207,11 +207,11 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         0,
     ),
 
-    # Honorific + Name anywhere in text  e.g.  "Mr John Smith"  "Mrs Angela Hayes"
+    # Honorific + Name anywhere in text  e.g.  "Mr John Smith"  "MR MALCOLM MAIR"
     (
-        r"\b(?:Mr|Mrs|Ms|Miss|Mx)\.?\s+((?:(?:[A-Z]\.?(?:\s+|$)){1,3}[A-Z][^\W\d_]+)|(?:[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2}))\b",
+        r"(?i)\b(?:Mr|Mrs|Ms|Miss|Mx)\.?\s+((?:(?:[A-Za-z]\.?(?:\s+|$)){1,3}[A-Za-z][^\W\d_]+)|(?:[A-Za-z][^\W\d_]+(?:\s+[A-Za-z][^\W\d_]+){0,2}))\b",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
-        0,
+        re.IGNORECASE,
     ),
 
     # Nurse / Sister title + name
