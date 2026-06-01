@@ -257,6 +257,7 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"started|starts|stopped|stops|received|receives|takes|took|taking|"
         r"agreed|agrees|declined|declines|brought|brings))",
         lambda m: "[NAME]" if m.group(1).lower() not in {
+            "he", "she", "him", "his", "her", "hers", "they", "them", "their", "theirs",
             "january", "february", "march", "april", "may", "june", "july", "august",
             "september", "october", "november", "december", "monday", "tuesday",
             "wednesday", "thursday", "friday", "saturday", "sunday"
