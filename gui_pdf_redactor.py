@@ -575,9 +575,33 @@ def targeted_body_redact(text: str) -> str:
     Everything else (clinical observations, medications, diagnoses, etc.)
     is left in its original format.
     """
+    # Track redactions: original_word -> redaction_token
+    redacted_words: dict[str, str] = {}
+
     for pattern, replacement, flags in _BODY_PHI_PATTERNS:
         if callable(replacement):
-            text = re.sub(pattern, replacement, text, flags=flags)
+            # Wrap the lambda to capture what was replaced
+            def make_wrapper(orig_replacement, orig_pattern):
+                def wrapper(m):
+                    result = orig_replacement(m)
+                    # If the replacement is a bracket token, try to extract the original word
+                    if isinstance(result, str) and "[" in result and "]" in result:
+                        # Common patterns: [NAME], [PROVIDER-NAME], [MED-ID], etc.
+                        original_text = m.group(0)
+                        # Try to extract names from the original match
+                        for group_idx in range(1, len(m.groups()) + 1):
+                            try:
+                                captured = m.group(group_idx)
+                                if captured and isinstance(captured, str):
+                                    # Store the mapping if this looks like a name or ID
+                                    if re.search(r"[A-Z][a-z]+|[A-Z0-9]{4,12}", captured):
+                                        redacted_words[captured] = result
+                            except:
+                                pass
+                    return result
+                return wrapper
+
+            text = re.sub(pattern, make_wrapper(replacement, pattern), text, flags=flags)
         else:
             text = re.sub(pattern, replacement, text, flags=flags)
 
@@ -662,6 +686,22 @@ def targeted_body_redact(text: str) -> str:
         lines[i] = line
 
     text = "\n".join(lines)
+
+    # ── POST-PASS: Check for re-occurrences of redacted words ─────────────────
+    # For each word that was redacted, search the entire text for any remaining
+    # instances and redact them too. This catches cases where a name or ID appeared
+    # multiple times but only the first instance was caught by the regex patterns.
+    if redacted_words:
+        for original_word, token in redacted_words.items():
+            # Build a pattern that matches the word as a whole word, but NOT
+            # if it's already inside brackets (e.g. "[NAME]" or "[MED-ID]")
+            # Use negative lookbehind/lookahead to avoid words already bracketed.
+            word_pattern = r"\b" + re.escape(original_word) + r"\b"
+            # Check that it's not already bracketed
+            word_pattern = r"(?<!\[)" + word_pattern + r"(?!\])"
+            # Replace any un-bracketed occurrences with the token
+            text = re.sub(word_pattern, token, text, flags=re.IGNORECASE)
+
     return text
 
 
