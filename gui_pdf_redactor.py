@@ -607,26 +607,60 @@ def targeted_body_redact(text: str) -> str:
 
     lines = text.splitlines()
 
-    # Redact person name on next line after "cc:" in letter-style layouts.
+    # Redact recipient block after "cc:", "Copy to:", "Copies to:", "Distribution:" etc.
     # Example:
-    #   cc:
-    #   Hazel Daniels
-    cc_only = re.compile(r"(?i)^cc\s*:\s*$")
+    #   Copy to:
+    #   Catherine Foley
+    #   Specialist Dietitian
+    #   Minerva House
+    cc_header = re.compile(
+        r"(?i)^(?:cc|c\.c\.?|copy\s+to|copies\s+to|copied\s+to|distribution|"
+        r"recipients?)\s*:\s*$"
+    )
     name_line = re.compile(
         r"^[A-Z][^\W\d_]+(?:['-][A-Z][^\W\d_]+)?"
         r"(?:\s+[A-Z][^\W\d_]+(?:['-][A-Z][^\W\d_]+)?){1,2}$"
     )
-    for i in range(len(lines) - 1):
-        if cc_only.match(lines[i].strip()):
-            # Skip one optional blank line between cc: and the recipient name.
+    role_line = re.compile(
+        r"(?i)^(?:[A-Z][a-z]+\s+)?(?:Dietitian|Nurse|Doctor|Consultant|Registrar|"
+        r"Surgeon|Therapist|Physiotherapist|Pharmacist|Psychologist|Psychiatrist|"
+        r"Specialist|Practitioner|GP|Manager|Coordinator|Secretary|Officer|"
+        r"Sister|Matron|Midwife|Radiographer|Sonographer|Anaesthetist|"
+        r"Counsellor|Counselor|Optometrist|Podiatrist|Dentist|"
+        r"Social\s+Worker|Health\s+Visitor|Care\s+Worker|Support\s+Worker)"
+        r"(?:\s+[A-Z][a-zA-Z]+){0,3}$"
+    )
+    address_block_line = re.compile(
+        r"(?i)^(?:[\/\#,\-]?\s*)?(?:\d+[A-Za-z]?\s+)?"
+        r"[A-Z0-9][A-Za-z0-9'.,&()\-/\s]{0,80}"
+        r"(?:Street|St\.?|Road|Rd\.?|Avenue|Ave\.?|Lane|Ln\.?|Drive|Dr\.?|Close|Way|"
+        r"Place|Court|Gardens|Terrace|Crescent|Grove|Walk|Mews|Row|Square|Hill|Park|"
+        r"House|Building|Centre|Center|Clinic|Hospital|Infirmary|Surgery|Practice|Unit)\b.*$"
+    )
+    postcode_only_line = re.compile(r"(?i)^\s*[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}\s*$")
+    for i in range(len(lines)):
+        if cc_header.match(lines[i].strip()):
             j = i + 1
             if j < len(lines) and not lines[j].strip():
                 j += 1
-            if j < len(lines):
+            block_count = 0
+            while j < len(lines) and lines[j].strip() and block_count < 8:
                 candidate = lines[j].strip()
-                if candidate and candidate not in {"[NAME]", "[ADDRESS]", "[POSTCODE]", "[ZIP]"}:
-                    if name_line.match(candidate):
-                        lines[j] = "[NAME]"
+                if candidate in {"[NAME]", "[ADDRESS]", "[POSTCODE]", "[ZIP]",
+                                 "[PROVIDER-NAME]", "[ORG-NAME]"}:
+                    j += 1
+                    block_count += 1
+                    continue
+                if name_line.match(candidate):
+                    lines[j] = "[NAME]"
+                elif role_line.match(candidate):
+                    lines[j] = "[PROVIDER-NAME]"
+                elif postcode_only_line.match(candidate):
+                    lines[j] = "[POSTCODE]"
+                elif address_block_line.match(candidate):
+                    lines[j] = "[ADDRESS]"
+                j += 1
+                block_count += 1
 
     # Address block cleanup for letters: if an address/facility line is found,
     # also redact the immediately following city/town line when it is a short
@@ -665,6 +699,20 @@ def targeted_body_redact(text: str) -> str:
                 "[ADDRESS]",
                 line,
             )
+
+        # If a line contains a redacted person/provider followed by an inline
+        # postal address and then a postcode, collapse the whole address chunk.
+        line = re.sub(
+            r"(\[(?:NAME|PROVIDER-NAME)\]\s*,?\s*)(?:\d+[A-Za-z]?\s+)?"
+            r"(?:[A-Za-z][A-Za-z'\.\-/]*\s+){0,6}"
+            r"(?:Street|St\.?|Road|Rd\.?|Avenue|Ave\.?|Lane|Ln\.?|Drive|Dr\.?|Close|Way|"
+            r"Place|Court|Gardens|Terrace|Crescent|Grove|Walk|Mews|Row|Square|Hill|Park)"
+            r"(?:\s*,\s*[A-Za-z][A-Za-z'\.\-/]*(?:\s+[A-Za-z][A-Za-z'\.\-/]*){0,3}){0,3}"
+            r"\s*\.?\s*(?=\[POSTCODE\])",
+            r"\1[ADDRESS] ",
+            line,
+            flags=re.IGNORECASE,
+        )
 
         # If a line still contains trailing name tokens after a redacted marker,
         # collapse the remainder to the same marker.
