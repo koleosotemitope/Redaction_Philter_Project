@@ -214,6 +214,14 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         0,
     ),
 
+    # Nurse / Sister title + name
+    (
+        r"\b(?:Sister|Senior\s+Sister|Nurse|Staff\s+Nurse|Charge\s+Nurse|Matron)\s+"
+        r"([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})\b",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
     # Narrative "seen/reviewed/examined/referred by [Dr] Name"
     # (?i:...) makes only the trigger words case-insensitive; [A-Z][^\W\d_]+ is case-sensitive
     # so medication names starting with lowercase are NOT captured.
@@ -223,6 +231,21 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"admitted\s+under|under\s+(?:the\s+)?care\s+of|care\s+of)"
         r"\s+(?:Dr\.?\s+|Mr\.?\s+|Mrs\.?\s+|Ms\.?\s+)?([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})\b",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
+    # Standalone first-name mentions in narrative clinical prose
+    # e.g. "Alice has...", "Alice was...", "Alice will..."
+    (
+        r"\b([A-Z][a-z]{2,})\b(?=\s+(?:has|had|have|was|were|is|are|will|would|can|could|"
+        r"did|does|reports?|reported|states?|stated|presented|attended|reviewed|"
+        r"informed|noted|advised|complains?|denies|continues|remains|improved|"
+        r"deteriorated|struggling|scheduled|requested|discussed|seen))",
+        lambda m: "[NAME]" if m.group(1).lower() not in {
+            "january", "february", "march", "april", "may", "june", "july", "august",
+            "september", "october", "november", "december", "monday", "tuesday",
+            "wednesday", "thursday", "friday", "saturday", "sunday"
+        } else m.group(1),
         0,
     ),
 
@@ -268,6 +291,22 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
     (
         r"\b(?:HSP|MRN|MR|REC|REF|ID)[\-:#]\s*[A-Z0-9]{4,12}\b",
         "[MED-ID]",
+        0,
+    ),
+    # Hospital / patient / ward number label on same line as value
+    # e.g. "Hospital No: 0096218"  "Hospital Number: 0556486"  "Patient Num 12345"
+    (
+        r"(?i)\b(?:Hospital|Patient|Inpatient|Outpatient|Ward|Admission|Episode|Case|Encounter)\s+"
+        r"(?:No\.?|Number|Num\.?)(?:\s+No\.?)?\s*[:\-]?\s*([A-Z0-9]{4,12})\b",
+        lambda m: m.group(0).replace(m.group(1), "[MED-ID]"),
+        0,
+    ),
+    # Hospital / patient number label on one line, value on the next line
+    # e.g. "Hospital Number\n0556486"
+    (
+        r"(?im)^((?:Hospital|Patient|Inpatient|Outpatient|Ward|Admission|Episode|Case|Encounter)\s+"
+        r"(?:No\.?|Number|Num\.?)(?:\s+No\.?)?\s*)\n(\s*)([A-Z0-9]{4,12})\s*$",
+        lambda m: m.group(1) + "\n" + m.group(2) + "[MED-ID]",
         0,
     ),
     # Insurance / member ID  labelled
@@ -373,9 +412,14 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         "[ADDRESS]",
         0,
     ),
-    # Facility line used as part of postal address block
+    # Facility line used as part of a postal address block.
+    # Keep this conservative so narrative doctor-note lines are not removed.
     (
-        r"(?im)^(?:[A-Z][^\n]{0,80})\b(?:Hospital|Infirmary|Surgery|Practice|Clinic|Centre|Center|Trust|Unit)\b[^\n]*$",
+        r"(?im)^(?=.{3,90}$)(?!.*\b(?:i|we|he|she|they|patient|reviewed|diagnosed|presented|"
+        r"complains?|reported|noted|today|yesterday|history|assessment|plan)\b)"
+        r"(?:[A-Z][a-zA-Z&'\-]+(?:\s+[A-Z][a-zA-Z&'\-]+){0,7}\s+"
+        r"(?:Hospital|Infirmary|Surgery|Practice|Clinic|Centre|Center|Trust|Unit)"
+        r"(?:\s+[A-Z][a-zA-Z&'\-]+){0,4})$",
         "[ADDRESS]",
         0,
     ),
@@ -402,7 +446,8 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
     ),
     # Dr / Doctor / Prof names
     (
-        r"\b(?:Dr\.?|Doctor|Prof\.?|Professor)\s+[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+)?\b",
+        r"\b(?:Dr\.?|Doctor|Prof\.?|Professor)\s+"
+        r"(?:(?:[A-Z]\.?(?:\s+|$)){1,4}[A-Z][^\W\d_]+|[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+)?)\b",
         "[PROVIDER-NAME]",
         0,
     ),
@@ -446,6 +491,17 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"(?m)(?:\bDear[ \t]+\[PROVIDER-NAME\][ \t]+|\bcc[ \t]*:[ \t]*|\bRe[ \t]+)"
         r"([A-Z]{2,}(?:[ \t]+[A-Z]{2,}){1,2})\b",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+    # Sign-off name lines after valedictions (common in letters)
+    (
+        r"(?im)^(Yours\s+sincerely)\s*\r?\n([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,3})\s*$",
+        lambda m: f"{m.group(1)}\n[NAME]",
+        0,
+    ),
+    (
+        r"(?im)^(Kind\s+regards)\s*\r?\n([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,3})\s*$",
+        lambda m: f"{m.group(1)}\n[NAME]",
         0,
     ),
     # Identifying occupations — label+colon required
@@ -837,7 +893,18 @@ def app() -> None:
                     redacted_text=redacted_text,
                 )
 
-                original_previews = render_pdf_preview_pages(original_pdf_bytes, max_pages=preview_pages) if original_pdf_bytes else []
+                # For non-PDF uploads the stored bytes are not a PDF; generate a
+                # text-rendered PDF so fitz can produce preview images.
+                if original_pdf_bytes and Path(original_pdf_name).suffix.lower() == ".pdf":
+                    original_preview_bytes = original_pdf_bytes
+                elif original_text:
+                    orig_preview_path = tmp_root / f"{Path(original_pdf_name).stem}_orig_preview.pdf"
+                    write_text_to_pdf(original_text, orig_preview_path)
+                    original_preview_bytes = orig_preview_path.read_bytes()
+                else:
+                    original_preview_bytes = b""
+
+                original_previews = render_pdf_preview_pages(original_preview_bytes, max_pages=preview_pages) if original_preview_bytes else []
                 redacted_previews = render_pdf_preview_pages(pdf_bytes, max_pages=preview_pages)
 
                 st.info(
@@ -852,6 +919,7 @@ def app() -> None:
                     {
                         "source_pdf": original_pdf_name,
                         "original_pdf_bytes": original_pdf_bytes,
+                        "original_pdf_for_embed": original_preview_bytes,
                         "redacted_pdf_name": redacted_pdf_name,
                         "pdf_bytes": pdf_bytes,
                         "layout_preview_pdf_bytes": layout_preview_pdf_bytes,
@@ -925,8 +993,10 @@ def app() -> None:
                 with left_col:
                     st.markdown("**Original PDF**")
                     original_pdf_bytes = result.get("original_pdf_bytes", b"")
-                    if original_pdf_bytes:
-                        render_embedded_pdf(original_pdf_bytes)
+                    original_pdf_for_embed = result.get("original_pdf_for_embed", b"")
+                    embed_bytes = original_pdf_for_embed or original_pdf_bytes
+                    if embed_bytes:
+                        render_embedded_pdf(embed_bytes)
                     else:
                         st.caption("Original PDF is unavailable for this file.")
 
