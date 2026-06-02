@@ -27,6 +27,7 @@ from philter import Philter
 ROOT_DIR = Path(__file__).resolve().parent
 DEFAULT_FILTERS = ROOT_DIR / "configs" / "philter_delta.json"
 PERSISTENT_OUTPUT_DIR = ROOT_DIR / "data" / "redacted_out_pdf"
+PERSISTENT_TXT_OUTPUT_DIR = ROOT_DIR / "data" / "redacted_out"
 
 
 def ensure_unique_name(name: str, seen: dict[str, int]) -> str:
@@ -243,6 +244,15 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         0,
     ),
 
+    # Names followed by commas and roles (e.g. "contact details of Mick Cullen and Claire Barnes, our paediatric gastroenterology specialist nurses")
+    (
+        r"(?i:contact\s+details?\s+of|staff\s+(?:members?|team)?|team\s+members?)\s+"
+        r"((?:[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})(?:\s+and\s+[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})*)"
+        r"(?:\s*,\s*(?:our|the|a)\s+[a-z\s]+(?:nurse|doctor|therapist|specialist|clinician|consultant|staff))\b",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
     # Standalone first-name mentions in narrative clinical prose
     # e.g. "Alice has...", "Alice was...", "Alice will..."
     (
@@ -440,6 +450,12 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         "[ADDRESS]",
         0,
     ),
+    # PO Box postal lines
+    (
+        r"(?im)^\s*(?:P\.?\s*O\.?\s*Box|PO\s*Box)\s*[A-Z0-9\-/ ]{1,20}(?:,?\s+[A-Z][^\n]{0,60})?$",
+        "[ADDRESS]",
+        0,
+    ),
     # Facility line used as part of a postal address block.
     # Keep this conservative so narrative doctor-note lines are not removed.
     (
@@ -489,6 +505,13 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
     (
         r"(?i)(?:Referred?\s+to|Clinic|Hospital|Practice|Centre|Center|Trust|Ward)\s*:\s*"
         r"[A-Z][a-zA-Z\s]{2,50}(?:Clinic|Hospital|Infirmary|Surgery|Practice|Centre|Center|Trust|Ward|Unit|NHS)\b",
+        "[ORG-NAME]",
+        0,
+    ),
+    # Standalone organization line commonly used in letter headers/addresses
+    (
+        r"(?im)^\s*(?:The\s+)?[A-Z][a-zA-Z&'.\-]+(?:\s+[A-Z][a-zA-Z&'.\-]+){0,6}\s+"
+        r"(?:Group|Practice|Clinic|Hospital|Infirmary|Centre|Center|Trust|Unit)\s*$",
         "[ORG-NAME]",
         0,
     ),
@@ -634,13 +657,13 @@ def targeted_body_redact(text: str) -> str:
         r"(?:\s+[A-Z][^\W\d_]+(?:['-][A-Z][^\W\d_]+)?){1,2}$"
     )
     role_line = re.compile(
-        r"(?i)^(?:[A-Z][a-z]+\s+)?(?:Dietitian|Nurse|Doctor|Consultant|Registrar|"
+        r"(?i)^(?:(?:[A-Z][a-zA-Z]+\s+){0,2})?(?:Dietitian|Nurse|Doctor|Consultant|Registrar|"
         r"Surgeon|Therapist|Physiotherapist|Pharmacist|Psychologist|Psychiatrist|"
         r"Specialist|Practitioner|GP|Manager|Coordinator|Secretary|Officer|"
         r"Sister|Matron|Midwife|Radiographer|Sonographer|Anaesthetist|"
         r"Counsellor|Counselor|Optometrist|Podiatrist|Dentist|"
         r"Social\s+Worker|Health\s+Visitor|Care\s+Worker|Support\s+Worker)"
-        r"(?:\s+[A-Z][a-zA-Z]+){0,3}$"
+        r"(?:\s+[A-Z][a-zA-Z]+){0,3}(?:\s+(?:in|of)\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,4})?$"
     )
     address_block_line = re.compile(
         r"(?i)^(?:[\/\#,\-]?\s*)?(?:\d+[A-Za-z]?\s+)?"
@@ -649,11 +672,16 @@ def targeted_body_redact(text: str) -> str:
         r"Place|Court|Gardens|Terrace|Crescent|Grove|Walk|Mews|Row|Square|Hill|Park|"
         r"House|Building|Centre|Center|Clinic|Hospital|Infirmary|Surgery|Practice|Unit)\b.*$"
     )
+    postal_org_line = re.compile(
+        r"(?i)^(?:Directorate|Department|Division|Service|Team|Care\s+Group|"
+        r"Medical\s+Team|Clinical\s+Team|Specialty|Speciality)\b.{0,90}$"
+    )
+    mailpoint_line = re.compile(r"(?i)^Mailpoint\b.{0,40}$")
     postcode_only_line = re.compile(r"(?i)^\s*[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}\s*$")
     for i in range(len(lines)):
         if cc_header.match(lines[i].strip()):
             j = i + 1
-            if j < len(lines) and not lines[j].strip():
+            while j < len(lines) and not lines[j].strip():
                 j += 1
             block_count = 0
             while j < len(lines) and lines[j].strip() and block_count < 8:
@@ -663,16 +691,38 @@ def targeted_body_redact(text: str) -> str:
                     j += 1
                     block_count += 1
                     continue
-                if name_line.match(candidate):
-                    lines[j] = "[NAME]"
+                if address_block_line.match(candidate) or postal_org_line.match(candidate) or mailpoint_line.match(candidate):
+                    lines[j] = "[ADDRESS]"
                 elif role_line.match(candidate):
                     lines[j] = "[PROVIDER-NAME]"
                 elif postcode_only_line.match(candidate):
                     lines[j] = "[POSTCODE]"
-                elif address_block_line.match(candidate):
-                    lines[j] = "[ADDRESS]"
+                elif name_line.match(candidate):
+                    prev_token = lines[j - 1].strip() if j - 1 >= 0 else ""
+                    if prev_token in {"[ADDRESS]", "[POSTCODE]", "[ZIP]"}:
+                        lines[j] = "[ADDRESS]"
+                    else:
+                        lines[j] = "[NAME]"
                 j += 1
                 block_count += 1
+
+    # Redact standalone person-name lines when they are clearly part of
+    # clinician/contact blocks (name line adjacent to a role line).
+    for i in range(len(lines)):
+        candidate = lines[i].strip()
+        if not candidate or candidate in {"[NAME]", "[PROVIDER-NAME]", "[ADDRESS]", "[POSTCODE]", "[ZIP]"}:
+            continue
+        if not name_line.match(candidate):
+            continue
+        if role_line.match(candidate):
+            continue
+
+        prev_line = lines[i - 1].strip() if i > 0 else ""
+        next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
+
+        if role_line.match(prev_line) or role_line.match(next_line):
+            lines[i] = "[NAME]"
+            redacted_words[candidate] = "[NAME]"
 
     # Address block cleanup for letters: if an address/facility line is found,
     # also redact the immediately following city/town line when it is a short
@@ -680,10 +730,11 @@ def targeted_body_redact(text: str) -> str:
     address_like = re.compile(
         r"\b(?:Street|Road|Avenue|Lane|Drive|Close|Way|Place|Court|Gardens|Terrace|Crescent|"
         r"Grove|Walk|Mews|Row|Square|Hill|Park|Hospital|Infirmary|Surgery|Practice|Clinic|"
-        r"Centre|Center|Trust|Unit|Address)\b",
+        r"Centre|Center|Trust|Unit|Address|Directorate|Department|Division|Service|Team|"
+        r"Care\s+Group|Mailpoint)\b",
         re.IGNORECASE,
     )
-    city_line = re.compile(r"^[A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2}$")
+    city_line = re.compile(r"^[A-Z][^\W\d_]*\.?(?:,?\s+[A-Z][^\W\d_]*\.?)*$")
 
     for i in range(len(lines) - 1):
         current = lines[i].strip()
@@ -695,10 +746,26 @@ def targeted_body_redact(text: str) -> str:
             lines[i + 1] = "[ADDRESS]"
             continue
 
+        if current in {"[POSTCODE]", "[ZIP]"} and (
+            city_line.match(nxt)
+            or postal_org_line.match(nxt)
+            or mailpoint_line.match(nxt)
+            or address_block_line.match(nxt)
+        ):
+            lines[i + 1] = "[ADDRESS]"
+            continue
+
         if current in {"[POSTCODE]", "[ZIP]", ""}:
             continue
 
+        if current in {"[ADDRESS]"} and (postal_org_line.match(nxt) or mailpoint_line.match(nxt) or address_block_line.match(nxt)):
+            lines[i + 1] = "[ADDRESS]"
+            continue
+
         if address_like.search(current) and city_line.match(nxt):
+            lines[i + 1] = "[ADDRESS]"
+
+        elif address_like.search(current) and (postal_org_line.match(nxt) or mailpoint_line.match(nxt) or address_block_line.match(nxt)):
             lines[i + 1] = "[ADDRESS]"
 
     # Inline address completion: if a line already has [ADDRESS] and [POSTCODE],
@@ -732,6 +799,11 @@ def targeted_body_redact(text: str) -> str:
         # collapse the remainder to the same marker.
         line = re.sub(
             r"\[NAME\](?:\s+(?:[A-Z]\.?(?=\s|$)|[A-Z][A-Z'\-]+|[A-Z][a-z][A-Za-z'\-]*))+",
+            "[NAME]",
+            line,
+        )
+        line = re.sub(
+            r"\[NAME\]\s+[A-Z][^\W\d_]+(?=\s*[-,:])",
             "[NAME]",
             line,
         )
@@ -901,6 +973,20 @@ def app() -> None:
     body_targeted_mode = redaction_mode.startswith("Body-aware")
     targeted_only_mode = redaction_mode.startswith("Targeted only")
 
+    output_format = st.radio(
+        "Output format",
+        options=["PDF only", "TXT only", "Both PDF and TXT"],
+        index=0,
+        help=(
+            "Choose what to generate after redaction.\n\n"
+            "- **PDF only** — generate a redacted PDF for download.\n"
+            "- **TXT only** — generate a plain-text .txt file (faster; no preview).\n"
+            "- **Both PDF and TXT** — generate both formats."
+        ),
+    )
+    want_pdf = output_format in {"PDF only", "Both PDF and TXT"}
+    want_txt = output_format in {"TXT only", "Both PDF and TXT"}
+
     body_marker_override = ""
     if body_targeted_mode:
         body_marker_override = st.text_input(
@@ -937,6 +1023,7 @@ def app() -> None:
         st.session_state["zip_bytes"] = None
 
         PERSISTENT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        PERSISTENT_TXT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
         with tempfile.TemporaryDirectory(prefix="philter_gui_") as tmp_dir:
             tmp_root = Path(tmp_dir)
@@ -1028,49 +1115,71 @@ def app() -> None:
                     redacted_txt_file.name,
                     f"{redacted_txt_file.stem}.pdf",
                 )
-                redacted_pdf_name = f"{Path(original_pdf_name).stem}_redacted.pdf"
+                stem = Path(original_pdf_name).stem
+                redacted_pdf_name = f"{stem}_redacted.pdf"
+                redacted_txt_name = f"{stem}_redacted.txt"
                 disk_pdf_path = PERSISTENT_OUTPUT_DIR / redacted_pdf_name
+                disk_txt_path = PERSISTENT_TXT_OUTPUT_DIR / redacted_txt_name
                 original_pdf_bytes = txt_name_to_original_pdf_bytes.get(redacted_txt_file.name, b"")
                 original_text = txt_name_to_original_text.get(redacted_txt_file.name, "")
-                write_text_to_pdf(redacted_text, disk_pdf_path)
-                pdf_bytes = disk_pdf_path.read_bytes()
-                layout_preview_pdf_bytes = build_layout_preview_pdf(
-                    original_pdf_bytes=original_pdf_bytes,
-                    original_text=original_text,
-                    redacted_text=redacted_text,
-                )
 
-                # For non-PDF uploads the stored bytes are not a PDF; generate a
-                # text-rendered PDF so fitz can produce preview images.
-                if original_pdf_bytes and Path(original_pdf_name).suffix.lower() == ".pdf":
-                    original_preview_bytes = original_pdf_bytes
-                elif original_text:
-                    orig_preview_path = tmp_root / f"{Path(original_pdf_name).stem}_orig_preview.pdf"
-                    write_text_to_pdf(original_text, orig_preview_path)
-                    original_preview_bytes = orig_preview_path.read_bytes()
+                # Always have the redacted text in memory; only write/build PDF if requested.
+                txt_bytes = redacted_text.encode("utf-8")
+                if want_txt:
+                    disk_txt_path.write_text(redacted_text, encoding="utf-8")
+
+                if want_pdf:
+                    write_text_to_pdf(redacted_text, disk_pdf_path)
+                    pdf_bytes = disk_pdf_path.read_bytes()
+                    layout_preview_pdf_bytes = build_layout_preview_pdf(
+                        original_pdf_bytes=original_pdf_bytes,
+                        original_text=original_text,
+                        redacted_text=redacted_text,
+                    )
+
+                    # For non-PDF uploads the stored bytes are not a PDF; generate a
+                    # text-rendered PDF so fitz can produce preview images.
+                    if original_pdf_bytes and Path(original_pdf_name).suffix.lower() == ".pdf":
+                        original_preview_bytes = original_pdf_bytes
+                    elif original_text:
+                        orig_preview_path = tmp_root / f"{stem}_orig_preview.pdf"
+                        write_text_to_pdf(original_text, orig_preview_path)
+                        original_preview_bytes = orig_preview_path.read_bytes()
+                    else:
+                        original_preview_bytes = b""
+
+                    original_previews = render_pdf_preview_pages(original_preview_bytes, max_pages=preview_pages) if original_preview_bytes else []
+                    redacted_previews = render_pdf_preview_pages(pdf_bytes, max_pages=preview_pages)
+
+                    st.info(
+                        f"Debug for `{original_pdf_name}`: "
+                        f"original_pdf_bytes={len(original_pdf_bytes)}, "
+                        f"redacted_pdf_bytes={len(pdf_bytes)}, "
+                        f"original_previews={len(original_previews)}, "
+                        f"redacted_previews={len(redacted_previews)}"
+                    )
                 else:
+                    pdf_bytes = b""
+                    layout_preview_pdf_bytes = b""
                     original_preview_bytes = b""
-
-                original_previews = render_pdf_preview_pages(original_preview_bytes, max_pages=preview_pages) if original_preview_bytes else []
-                redacted_previews = render_pdf_preview_pages(pdf_bytes, max_pages=preview_pages)
-
-                st.info(
-                    f"Debug for `{original_pdf_name}`: "
-                    f"original_pdf_bytes={len(original_pdf_bytes)}, "
-                    f"redacted_pdf_bytes={len(pdf_bytes)}, "
-                    f"original_previews={len(original_previews)}, "
-                    f"redacted_previews={len(redacted_previews)}"
-                )
+                    original_previews = []
+                    redacted_previews = []
 
                 st.session_state["results"].append(
                     {
                         "source_pdf": original_pdf_name,
                         "original_pdf_bytes": original_pdf_bytes,
                         "original_pdf_for_embed": original_preview_bytes,
+                        "original_txt_bytes": original_text.encode("utf-8", errors="replace"),
                         "redacted_pdf_name": redacted_pdf_name,
+                        "redacted_txt_name": redacted_txt_name,
                         "pdf_bytes": pdf_bytes,
+                        "txt_bytes": txt_bytes,
+                        "want_pdf": want_pdf,
+                        "want_txt": want_txt,
                         "layout_preview_pdf_bytes": layout_preview_pdf_bytes,
-                        "saved_path": str(disk_pdf_path),
+                        "saved_path": str(disk_pdf_path) if want_pdf else "",
+                        "saved_txt_path": str(disk_txt_path) if want_txt else "",
                         "original_page_previews": original_previews,
                         "redacted_page_previews": redacted_previews,
                     }
@@ -1080,31 +1189,82 @@ def app() -> None:
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
                     for result in st.session_state["results"]:
-                        zipf.writestr(result["redacted_pdf_name"], result["pdf_bytes"])
+                        if result.get("want_pdf") and result.get("pdf_bytes"):
+                            zipf.writestr(result["redacted_pdf_name"], result["pdf_bytes"])
+                        if result.get("want_txt") and result.get("txt_bytes"):
+                            zipf.writestr(result["redacted_txt_name"], result["txt_bytes"])
                 st.session_state["zip_bytes"] = zip_buffer.getvalue()
 
     if st.session_state["results"]:
-        st.success(f"Generated {len(st.session_state['results'])} redacted PDF file(s).")
-        st.caption(f"Saved PDF output folder: {PERSISTENT_OUTPUT_DIR}")
+        st.success(f"Generated {len(st.session_state['results'])} redacted file(s).")
+        any_pdf = any(r.get("want_pdf") for r in st.session_state["results"])
+        any_txt = any(r.get("want_txt") for r in st.session_state["results"])
+        if any_pdf:
+            st.caption(f"Saved PDF output folder: {PERSISTENT_OUTPUT_DIR}")
+        if any_txt:
+            st.caption(f"Saved TXT output folder: {PERSISTENT_TXT_OUTPUT_DIR}")
 
         if st.session_state["zip_bytes"]:
             st.download_button(
-                "Download all redacted PDFs (zip)",
+                "Download all redacted files (zip)",
                 data=st.session_state["zip_bytes"],
-                file_name="redacted_pdfs.zip",
+                file_name="redacted_outputs.zip",
                 mime="application/zip",
             )
 
         st.subheader("Outputs")
         for result in st.session_state["results"]:
             st.markdown(f"**Source:** {result['source_pdf']}")
-            st.caption(f"Saved file: {result['saved_path']}")
-            st.download_button(
-                label=f"Download {result['redacted_pdf_name']}",
-                data=result["pdf_bytes"],
-                file_name=result["redacted_pdf_name"],
-                mime="application/pdf",
-            )
+            if result.get("want_pdf") and result.get("saved_path"):
+                st.caption(f"Saved PDF: {result['saved_path']}")
+            if result.get("want_txt") and result.get("saved_txt_path"):
+                st.caption(f"Saved TXT: {result['saved_txt_path']}")
+
+            if result.get("want_pdf") and result.get("pdf_bytes"):
+                st.download_button(
+                    label=f"Download {result['redacted_pdf_name']}",
+                    data=result["pdf_bytes"],
+                    file_name=result["redacted_pdf_name"],
+                    mime="application/pdf",
+                    key=f"dl_pdf_{result['redacted_pdf_name']}",
+                )
+            if result.get("want_txt") and result.get("txt_bytes"):
+                st.download_button(
+                    label=f"Download {result['redacted_txt_name']}",
+                    data=result["txt_bytes"],
+                    file_name=result["redacted_txt_name"],
+                    mime="text/plain",
+                    key=f"dl_txt_{result['redacted_txt_name']}",
+                )
+
+            with st.expander("Show text (original vs redacted)"):
+                left_col, right_col = st.columns(2)
+                original_text = result.get("original_txt_bytes", b"").decode("utf-8", errors="replace")
+                redacted_text = result.get("txt_bytes", b"").decode("utf-8", errors="replace")
+
+                with left_col:
+                    st.markdown("**Original text**")
+                    if original_text:
+                        st.text_area(
+                            "Original",
+                            value=original_text,
+                            height=280,
+                            key=f"orig_text_{result['source_pdf']}",
+                        )
+                    else:
+                        st.caption("Original text unavailable for this file.")
+
+                with right_col:
+                    st.markdown("**Redacted text**")
+                    st.text_area(
+                        "Redacted",
+                        value=redacted_text,
+                        height=280,
+                        key=f"redacted_text_{result['redacted_txt_name']}",
+                    )
+
+            if not result.get("want_pdf"):
+                continue
 
             with st.expander("Show document preview (original vs redacted)"):
                 original_previews = result.get("original_page_previews", [])
