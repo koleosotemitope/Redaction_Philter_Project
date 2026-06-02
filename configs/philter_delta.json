@@ -1073,6 +1073,20 @@
         "filepath":"filters/regex/addresses/uk_postcode_transformed.txt",
         "notes":"This should remove UK postcodes such as BD5 8JT or LS11 4RF"
     },
+    {
+        "title":"uk saint street address",
+        "type":"regex",
+        "exclude":true,
+        "filepath":"filters/regex/addresses/uk_saint_street_transformed.txt",
+        "notes":"Catches UK addresses with apostrophe-S saint names e.g. 7 St.Deny'S Road"
+    },
+    {
+        "title":"uk gp surgery",
+        "type":"regex",
+        "exclude":true,
+        "filepath":"filters/regex/organizations/uk_gp_surgery_transformed.txt",
+        "notes":"Catches UK GP surgery organisation names e.g. St.Deny'S Surgery"
+    },
 
     {
         "title":"lives in",

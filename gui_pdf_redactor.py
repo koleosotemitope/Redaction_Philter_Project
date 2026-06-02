@@ -427,7 +427,7 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
     ),
     # Number + Street
     (
-        r"(?i)\b\d+[A-Za-z]?\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3}"
+        r"(?i)\b\d+[A-Za-z]?\s+[A-Z][a-zA-Z.']+(?:\s+[A-Z][a-zA-Z.']+){0,3}"
         r"\s+(?:Street|Road|Avenue|Lane|Drive|Close|Way|Place|Court"
         r"|Gardens|Terrace|Crescent|Grove|Walk|Mews|Row|Square|Hill|Park|Flats?|Apartments?)\b",
         "[ADDRESS]",
@@ -445,9 +445,9 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
     (
         r"(?im)^(?=.{3,90}$)(?!.*\b(?:i|we|he|she|they|patient|reviewed|diagnosed|presented|"
         r"complains?|reported|noted|today|yesterday|history|assessment|plan)\b)"
-        r"(?:[A-Z][a-zA-Z&'\-]+(?:\s+[A-Z][a-zA-Z&'\-]+){0,7}\s+"
+        r"(?:[A-Z][a-zA-Z&'.\-]+(?:\s+[A-Z][a-zA-Z&'.\-]+){0,7}\s+"
         r"(?:Hospital|Infirmary|Surgery|Practice|Clinic|Centre|Center|Trust|Unit)"
-        r"(?:\s+[A-Z][a-zA-Z&'\-]+){0,4})$",
+        r"(?:\s+[A-Z][a-zA-Z&'.\-]+){0,4})$",
         "[ADDRESS]",
         0,
     ),
