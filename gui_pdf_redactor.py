@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import base64
+import importlib.util
 import re
 import tempfile
 import textwrap
@@ -28,6 +29,81 @@ ROOT_DIR = Path(__file__).resolve().parent
 DEFAULT_FILTERS = ROOT_DIR / "configs" / "philter_delta.json"
 PERSISTENT_OUTPUT_DIR = ROOT_DIR / "data" / "redacted_out_pdf"
 PERSISTENT_TXT_OUTPUT_DIR = ROOT_DIR / "data" / "redacted_out"
+_PTEREDACTYL_ANALYSER = None
+_PTEREDACTYL_REGEX_ANALYSER = None
+
+
+def has_pteredactyl() -> bool:
+    return importlib.util.find_spec("pteredactyl") is not None
+
+
+def apply_pteredactyl_redaction(text: str) -> str:
+    """Apply full pteredactyl entities, then fall back to regex-only if needed."""
+    global _PTEREDACTYL_ANALYSER
+    global _PTEREDACTYL_REGEX_ANALYSER
+
+    try:
+        import pteredactyl as pt  # type: ignore
+    except Exception:
+        return text
+
+    try:
+        if _PTEREDACTYL_ANALYSER is None:
+            _PTEREDACTYL_ANALYSER = pt.create_analyser(
+                regex_entities=pt.DEFAULT_REGEX_ENTITIES,
+            )
+
+        # Full entity pass (PERSON, LOCATION, ORGANIZATION, etc.) + regex entities.
+        redacted = pt.anonymise(
+            text,
+            analyser=_PTEREDACTYL_ANALYSER,
+            entities=pt.DEFAULT_ENTITIES,
+            regex_entities=pt.DEFAULT_REGEX_ENTITIES,
+            rebuild_regex_recognisers=False,
+        )
+
+    except Exception as full_error:
+        print(f"[DEBUG] pteredactyl full-entity pass failed, falling back to regex-only: {full_error}")
+        try:
+            if _PTEREDACTYL_REGEX_ANALYSER is None:
+                _PTEREDACTYL_REGEX_ANALYSER = pt.create_analyser(
+                    regex_entities=pt.DEFAULT_REGEX_ENTITIES,
+                )
+
+            redacted = pt.anonymise(
+                text,
+                analyser=_PTEREDACTYL_REGEX_ANALYSER,
+                entities=[],
+                regex_entities=pt.DEFAULT_REGEX_ENTITIES,
+                rebuild_regex_recognisers=False,
+            )
+        except Exception as regex_error:
+            print(f"[DEBUG] pteredactyl redaction skipped due to error: {regex_error}")
+            return text
+
+    try:
+        # Regex entities
+        redacted = redacted.replace("<EMAIL_ADDRESS>", "[EMAIL]")
+        redacted = redacted.replace("<POSTCODE>", "[POSTCODE]")
+        redacted = redacted.replace("<NHS_NUMBER>", "[NHS-NO]")
+
+        # NER entities
+        redacted = redacted.replace("<PERSON>", "[NAME]")
+        redacted = redacted.replace("<LOCATION>", "[ADDRESS]")
+        redacted = redacted.replace("<ORGANIZATION>", "[ORG-NAME]")
+        redacted = redacted.replace("<AGE>", "[AGE]")
+        redacted = redacted.replace("<PHONE_NUMBER>", "[PHONE]")
+        redacted = redacted.replace("<DATE_TIME>", "[DATE]")
+        redacted = redacted.replace("<DEVICE>", "[SERIAL-NO]")
+        redacted = redacted.replace("<ZIP>", "[ZIP]")
+        redacted = redacted.replace("<PROFESSION>", "[OCCUPATION-ID]")
+        redacted = redacted.replace("<USERNAME>", "[USERNAME]")
+        redacted = redacted.replace("<ID>", "[MED-ID]")
+
+        return redacted
+    except Exception as e:
+        print(f"[DEBUG] pteredactyl token mapping failed: {e}")
+        return text
 
 
 def ensure_unique_name(name: str, seen: dict[str, int]) -> str:
@@ -661,7 +737,7 @@ def split_header_body(text: str, custom_marker: str = "") -> tuple[str, str, int
     return text, "", len(text)
 
 
-def targeted_body_redact(text: str) -> str:
+def targeted_body_redact(text: str, *, use_pteredactyl_rules: bool = False) -> str:
     """Apply HIPAA Safe Harbor + NHS targeted redaction to body text only.
 
     Redacts: names, initials, DOB, age >89, address, postcode/ZIP, phone/fax,
@@ -914,6 +990,9 @@ def targeted_body_redact(text: str) -> str:
             # Replace any un-bracketed occurrences with the token
             text = re.sub(word_pattern, token, text, flags=re.IGNORECASE)
 
+    if use_pteredactyl_rules:
+        text = apply_pteredactyl_redaction(text)
+
     return text
 
 
@@ -922,6 +1001,7 @@ def run_philter_body_aware(
     output_dir: Path,
     filters_path: Path,
     body_marker: str = "",
+    use_pteredactyl_rules: bool = False,
 ) -> None:
     """Two-pass redaction:
     1. Run full philter over every file (header gets full redaction).
@@ -957,7 +1037,10 @@ def run_philter_body_aware(
             continue  # no body detected – keep full philter output
 
         header_redacted = redacted_text[:split_pos]
-        body_targeted = targeted_body_redact(body_orig)
+        body_targeted = targeted_body_redact(
+            body_orig,
+            use_pteredactyl_rules=use_pteredactyl_rules,
+        )
         redacted_file.write_text(header_redacted + body_targeted, encoding="utf-8")
 
 
@@ -981,7 +1064,11 @@ def run_philter_on_folder(input_dir: Path, output_dir: Path, filters_path: Path)
 
 # ── Targeted-only pipeline (whole document, no Philter) ──────────────────────
 
-def run_targeted_only_on_folder(input_dir: Path, output_dir: Path) -> None:
+def run_targeted_only_on_folder(
+    input_dir: Path,
+    output_dir: Path,
+    use_pteredactyl_rules: bool = False,
+) -> None:
     """Apply the targeted PHI regex patterns to the WHOLE document.
 
     Skips Philter entirely so medications, diagnoses, lab values and ordinary
@@ -991,7 +1078,10 @@ def run_targeted_only_on_folder(input_dir: Path, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     for src in input_dir.glob("*.txt"):
         original = src.read_text(encoding="utf-8")
-        redacted = targeted_body_redact(original)
+        redacted = targeted_body_redact(
+            original,
+            use_pteredactyl_rules=use_pteredactyl_rules,
+        )
         (output_dir / src.name).write_text(redacted, encoding="utf-8")
 
 
@@ -1050,6 +1140,22 @@ def app() -> None:
     )
     body_targeted_mode = redaction_mode.startswith("Body-aware")
     targeted_only_mode = redaction_mode.startswith("Targeted only")
+
+    pteredactyl_installed = has_pteredactyl()
+    use_pteredactyl_rules = st.checkbox(
+        "Use full pteredactyl entities (PERSON, LOCATION, ORG, IDs, dates, phones, regex)",
+        value=pteredactyl_installed,
+        disabled=not pteredactyl_installed,
+        help=(
+            "Applies pteredactyl DEFAULT_ENTITIES and DEFAULT_REGEX_ENTITIES as an "
+            "extra pass after the project's targeted rules."
+        ),
+    )
+    if not pteredactyl_installed:
+        st.caption(
+            "pteredactyl not installed. Install with: "
+            r".\\.venv311\\Scripts\\python.exe -m pip install pteredactyl"
+        )
 
     output_format = st.radio(
         "Output format",
@@ -1168,13 +1274,18 @@ def app() -> None:
             if any(ingested_txt_dir.glob("*.txt")):
                 try:
                     if targeted_only_mode:
-                        run_targeted_only_on_folder(ingested_txt_dir, redacted_txt_dir)
+                        run_targeted_only_on_folder(
+                            ingested_txt_dir,
+                            redacted_txt_dir,
+                            use_pteredactyl_rules=use_pteredactyl_rules,
+                        )
                     elif body_targeted_mode:
                         run_philter_body_aware(
                             ingested_txt_dir,
                             redacted_txt_dir,
                             filters_path,
                             body_marker=body_marker_override,
+                            use_pteredactyl_rules=use_pteredactyl_rules,
                         )
                     else:
                         run_philter_on_folder(ingested_txt_dir, redacted_txt_dir, filters_path)

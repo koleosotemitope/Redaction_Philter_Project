@@ -49,9 +49,42 @@ The app lets you:
 	- Full Philter (all PHI everywhere)
 	- Body-aware (full in header + targeted in body)
 	- Targeted-only (whole document, preserves medications/common words)
+- Optionally enable full `pteredactyl` entities as an extra pass (PERSON, LOCATION, ORGANIZATION, IDs, dates, phones, plus regex entities).
 - Run PHI redaction using your filter config.
 - Download individual redacted PDFs or a ZIP bundle.
 - Save generated PDFs to `data/redacted_out_pdf/`.
+
+### Layered Rules: Existing Rules + pteredactyl
+
+The GUI now supports a layered redaction flow:
+
+1. Project rules run first (your existing Philter + targeted regex rules).
+2. If enabled, full `pteredactyl` entities run second as an additional pass.
+
+This means your previous rules are preserved and **not replaced**.
+
+Current `pteredactyl` entities used in the GUI pass:
+- NER entities: `PERSON`, `LOCATION`, `ORGANIZATION`, `AGE`, `PHONE_NUMBER`, `DATE_TIME`, `DEVICE`, `ZIP`, `PROFESSION`, `USERNAME`, `ID`
+- Regex entities: `NHS_NUMBER`, `POSTCODE`, `EMAIL_ADDRESS`
+
+In output, pteredactyl tokens are normalized to this project's placeholders:
+- `<PERSON>` -> `[NAME]`
+- `<LOCATION>` -> `[ADDRESS]`
+- `<ORGANIZATION>` -> `[ORG-NAME]`
+- `<AGE>` -> `[AGE]`
+- `<PHONE_NUMBER>` -> `[PHONE]`
+- `<DATE_TIME>` -> `[DATE]`
+- `<DEVICE>` -> `[SERIAL-NO]`
+- `<ZIP>` -> `[ZIP]`
+- `<PROFESSION>` -> `[OCCUPATION-ID]`
+- `<USERNAME>` -> `[USERNAME]`
+- `<ID>` -> `[MED-ID]`
+- `<NHS_NUMBER>` -> `[NHS-NO]`
+- `<POSTCODE>` -> `[POSTCODE]`
+- `<EMAIL_ADDRESS>` -> `[EMAIL]`
+
+Enable/disable this behavior from the GUI checkbox:
+- `Use full pteredactyl entities (PERSON, LOCATION, ORG, IDs, dates, phones, regex)`
 
 # Running Philter: A Step-by-Step Guide
 
@@ -431,6 +464,14 @@ Expected result: no matches.
 
 - For scanned PDFs/images, install system Tesseract OCR and ensure `tesseract` is available on PATH.
 - For text-native PDFs, conversion often succeeds without OCR fallback.
+
+### pteredactyl notes
+
+- `requirements_gui.txt` now includes `pteredactyl`.
+- On first use, `pteredactyl` may download `en_core_web_sm` for spaCy.
+- If CUDA is not installed (or not compatible with your torch build), `pteredactyl` runs on CPU.
+- The GUI attempts full `pteredactyl` entity redaction first; if model loading fails at runtime, it automatically falls back to regex-only pteredactyl entities so processing still completes.
+- You can disable the pteredactyl extra pass in the GUI and still keep all project-native rules.
 
 ---
 
