@@ -541,5 +541,4 @@ Expected in targeted-only mode:
 - Correct: `.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py`
 
 - Wrong folder: running from parent directory without project path
-- Correct: run from `	
-` root (or provide full relative paths)
+- Correct: run from `Redaction_Philter_Project` root (or provide full relative paths)

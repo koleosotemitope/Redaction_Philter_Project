@@ -203,13 +203,58 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"Emergency[ \t]+Contact|Family[ \t]+Member|Relative|Carer|Guardian|"
         r"Referred[ \t]+by|Author|Dictated[ \t]+by|Signed[ \t]+by|"
         r"Consultant|Clinician|Attending|Nurse|Therapist|Physiotherapist|"
-        r"Pharmacist|Surgeon|Registrar|GP|Key[ \t]+Worker|Keyworker|"
-        r"Reviewed[ \t]+by|Seen[ \t]+by|Prepared[ \t]+by|Attended[ \t]+by)"
+        r"Pharmacist|Surgeon|Registrar|GP|Requester|Key[ \t]+Worker|Keyworker|"
+        r"Reviewed[ \t]+by|Seen[ \t]+by|Prepared[ \t]+by|Attended[ \t]+by|"
+        r"Clinical[ \t]+Lead|Lead[ \t]+Clinician|Lead[ \t]+Nurse|Lead[ \t]+Consultant|"
+        r"Named[ \t]+Nurse|Named[ \t]+Doctor|Key[ \t]+Clinician|Responsible[ \t]+Clinician|"
+        r"Responsible[ \t]+Consultant|Allocated[ \t]+Nurse|Care[ \t]+Coordinator|"
+        r"Keyworker|Key[ \t]+Worker|Dietitian|Dietician|Social[ \t]+Worker|"
+        r"Occupational[ \t]+Therapist|Speech[ \t]+Therapist|Podiatrist|Radiologist|"
+        r"Anaesthetist|Anesthesiologist|Oncologist|Cardiologist|Neurologist)"
         r"[ \t]*:[ \t]+(?:Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Mx\.?)?[ \t]*"
-        r"((?:[A-Z]\.?[A-Za-z'\-]*)(?:[ \t][A-Z]\.?[A-Za-z'\-]*){0,3})"
+        r"((?:[A-Z][A-Za-z'\-]*(?:(?:,[ \t]*[A-Z]\.?)|(?:,[ \t]*[A-Z][A-Za-z'\-]+(?:[ \t]+[A-Z][A-Za-z'\-]+){0,2}))?(?:[ \t]+\([A-Z]+\))?"
+        r"|[A-Z]\.?[A-Za-z'\-]*)(?:[ \t][A-Z]\.?[A-Za-z'\-]*){0,3})"
         r"(?=[ \t]{2,}|[ \t]+[A-Z][A-Za-z'\-]*[ \t]*:|[ \t]*$|[\r\n])",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
         re.MULTILINE,
+    ),
+
+    # Columnar name fields — NO colon, label separated from value by 2+ spaces/tabs
+    # e.g. "Name   Konstantopoulos Aqk Adult"  (header table format)
+    (
+        r"(?:Patient(?:[ \t]+Name)?|Full[ \t]+Name|Name|Clinical[ \t]+Lead|"
+        r"Lead[ \t]+Clinician|Consultant|Registrar|Dietitian|Social[ \t]+Worker)"
+        r"[ \t]{2,}(?:Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Mx\.?)?[ \t]*"
+        r"((?:[A-Z][A-Za-z'\-]+)(?:[ \t][A-Z][A-Za-z'\-]+){0,4})"
+        r"(?=[ \t]{2,}|[ \t]*$|[\r\n])",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        re.MULTILINE,
+    ),
+
+    # Label on one line, name on the next line (common in table-style referral forms)
+    # e.g. "Clinical Lead:\nFAZLEEN, AISHATH (DR)" / "Requester:\nMonsuru-Oke, Mosunmoluwa"
+    (
+        r"(?im)^(\s*(?:Clinical\s+Lead|Requester|Consultant(?:\s*&\s*specialty)?|"
+        r"Responsible\s+Consultant|Referring\s+team(?:\s+and\s+bleep\s+number)?)\s*:\s*)\r?\n(\s*)"
+        r"([A-Z][A-Za-z'\-]+(?:,\s*[A-Z][A-Za-z'\-]+(?:\s+[A-Z][A-Za-z'\-]+){0,2})?"
+        r"(?:\s+\([A-Z]+\))?)\s*$",
+        lambda m: m.group(1) + "\n" + m.group(2) + "[NAME]",
+        0,
+    ),
+
+    # Name appearing immediately after a [MED-ID] token on the same line
+    # e.g. "Patient [MED-ID]:   Felwick"  or  "Dietitian's Patient [MED-ID]:   Vasso K."
+    (
+        r"(?i)(?:\[MED-ID\][ \t]*:?[ \t]+)((?:[A-Z][A-Za-z'\-]+)(?:[ \t]+[A-Z]\.?)?(?:[ \t][A-Z][A-Za-z'\-]+){0,2})",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
+    ),
+
+    # Contact No / Contact Bleep label + name (e.g. "Contact No:   Vasso K.")
+    (
+        r"(?i)(?:Contact[ \t]+(?:No\.?|Name|Person)[ \t]*:[ \t]+)((?:[A-Z][A-Za-z'\-]+)(?:[ \t]+[A-Z]\.?)?(?:[ \t][A-Z][A-Za-z'\-]+){0,2})",
+        lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        0,
     ),
 
     # Standalone "by [Name]" pattern (e.g. "[MED-ID] by EMMA WHITEHEAD", "Completed by Dr Smith")
@@ -390,6 +435,18 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
     ),
 
     # ── PHONE / FAX ──────────────────────────────────────────────────────────
+    # Contact Bleep / Pager — 4- or 5-digit internal extension after label
+    (
+        r"(?i)(?:Contact\s+)?Bleep\s*:?\s*(\d{3,5})\b",
+        lambda m: m.group(0).replace(m.group(1), "[BLEEP]"),
+        0,
+    ),
+    # Contact No / Ext / Extension — short numeric after label
+    (
+        r"(?i)(?:Contact\s+No|Ext(?:ension)?|Extn|Internal\s+No)\.?\s*:?\s*(\d{3,6})\b",
+        lambda m: m.group(0).replace(m.group(1), "[PHONE]"),
+        0,
+    ),
     # UK mobile / landline
     (
         r"(?:\+44\s?|0)(?:\d[\s\-]?){9,11}\b",
@@ -506,6 +563,13 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         "[PROVIDER-NAME]",
         0,
     ),
+    # Uppercase provider style used in summaries, e.g. "DR T HOLLINGWORTH"
+    (
+        r"(?i)\b(?:DR|DOCTOR|PROF|PROFESSOR)\.?\s+"
+        r"((?:[A-Z]\.?(?:\s+|$)){1,3}[A-Z][A-Z'\-]+(?:\s+[A-Z][A-Z'\-]+){0,2})\b",
+        lambda m: m.group(0).replace(m.group(1), "[PROVIDER-NAME]"),
+        0,
+    ),
     # GMC / NMC registration numbers
     (
         r"(?i)\bGMC\s*:?\s*\d{6,8}\b|\bNMC\s*:?\s*\d{6,8}[A-Z]?\b",
@@ -610,6 +674,9 @@ def targeted_body_redact(text: str) -> str:
     Everything else (clinical observations, medications, diagnoses, etc.)
     is left in its original format.
     """
+    # Normalize OCR-exported non-breaking spaces so [ \t]-based regexes match reliably.
+    text = text.replace("\u00A0", " ")
+
     # Track redactions: original_word -> redaction_token
     redacted_words: dict[str, str] = {}
 
