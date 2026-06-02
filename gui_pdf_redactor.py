@@ -579,6 +579,17 @@ def targeted_body_redact(text: str) -> str:
     # Track redactions: original_word -> redaction_token
     redacted_words: dict[str, str] = {}
 
+    # Pre-scan: extract bare names that appear with Dr/Prof titles so that
+    # inline occurrences without any title are caught in the post-pass sweep.
+    _titled_name_re = re.compile(
+        r"\b(?:Dr\.?|Doctor|Prof\.?|Professor)\s+"
+        r"((?:[A-Z][a-z][a-zA-Z'\-]*\s+){0,2}[A-Z][a-z][a-zA-Z'\-]*)",
+    )
+    for _m in _titled_name_re.finditer(text):
+        bare = _m.group(1).strip().rstrip(".")
+        if bare:
+            redacted_words[bare] = "[PROVIDER-NAME]"
+
     for pattern, replacement, flags in _BODY_PHI_PATTERNS:
         if callable(replacement):
             # Wrap the lambda to capture what was replaced
