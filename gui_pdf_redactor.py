@@ -195,6 +195,9 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
 
     # ── PATIENT / CONTACT NAMES — run FIRST so labels are intact ─────────────
     # Expanded label list; uses [ \t]+ (not \s+) to avoid crossing line breaks.
+    # Capture stops at: 2+ spaces (column gap), the next "Word:" label on the same line,
+    # or end-of-line. Inter-word spacing inside a name is restricted to a single space
+    # so wide column gaps cannot pull the next label into the name.
     (
         r"(?:Patient(?:[ \t]+Name)?|Full[ \t]+Name|Name|Next[ \t]+of[ \t]+Kin|"
         r"Emergency[ \t]+Contact|Family[ \t]+Member|Relative|Carer|Guardian|"
@@ -203,8 +206,16 @@ _BODY_PHI_PATTERNS: list[tuple[str, str, int]] = [
         r"Pharmacist|Surgeon|Registrar|GP|Key[ \t]+Worker|Keyworker|"
         r"Reviewed[ \t]+by|Seen[ \t]+by|Prepared[ \t]+by|Attended[ \t]+by)"
         r"[ \t]*:[ \t]+(?:Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Mx\.?)?[ \t]*"
-        r"((?:(?:[A-Z]\.?(?:[ \t]+|$)){1,3}[A-Z][A-Za-z'\-]+)|(?:[A-Z][^\W\d_]+(?:[ \t]+[A-Z][^\W\d_]+){1,2})|(?:[A-Z][^\W\d_]*[ \t]+[A-Z]\.?(?:[ \t]+[A-Z][A-Za-z'\-]+)+))",
+        r"((?:[A-Z]\.?[A-Za-z'\-]*)(?:[ \t][A-Z]\.?[A-Za-z'\-]*){0,3})"
+        r"(?=[ \t]{2,}|[ \t]+[A-Z][A-Za-z'\-]*[ \t]*:|[ \t]*$|[\r\n])",
         lambda m: m.group(0).replace(m.group(1), "[NAME]"),
+        re.MULTILINE,
+    ),
+
+    # Standalone "by [Name]" pattern (e.g. "[MED-ID] by EMMA WHITEHEAD", "Completed by Dr Smith")
+    (
+        r"\bby\s+(?:Dr\.?\s+|Mr\.?\s+|Mrs\.?\s+|Ms\.?\s+)?([A-Z][^\W\d_]+(?:\s+[A-Z][^\W\d_]+){0,2})\b",
+        lambda m: m.group(0).replace(m.group(1), "[PROVIDER-NAME]"),
         0,
     ),
 
