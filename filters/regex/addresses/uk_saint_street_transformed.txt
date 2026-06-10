@@ -1,1 +1,0 @@
-\b(?i)\d+\s+(?:[A-Z][a-zA-Z.']*\s+)?[A-Z][a-zA-Z.']*'[Ss]\s+(?:Road|Rd|Street|St|Lane|Ln|Avenue|Ave|Close|Drive|Dr|Way|Place|Pl|Crescent|Cres|Court|Ct|Gardens?|Terrace|Terr|Hill|Rise|Grove|Walk|View|Row|Square|Sq)\b
