@@ -1,0 +1,48 @@
+Our Ref: (T) //[MED-ID]
+ 
+[DATE]
+
+
+Clinic Letter : [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+[ADDRESS]
+[ADDRESS]
+Colorectal/Lower GI
+CE144, E Level, Mailpoint [ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+
+
+Dear [PROVIDER-NAME] [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], [ADDRESS] Number: [NHS-NO]
+
+
+
+I saw MR [NAME] today. He had an MRI scan of his now simple fistula which shows that he has a small focus of intersphincteric sepsis on the left anterior side at 2 o'clock and the fistula passing through the internal sphincter. Today on examination there was no induration, no problems here and it drains freely today. I have decided not to put the seton back in and to leave him as it is.
+
+
+
+
+Best wishes
+
+
+
+
+Yours sincerely
+
+
+
+
+
+
+Miss [NAME], [NAME], [ADDRESS]
+
+Consultant Colorectal Surgeon

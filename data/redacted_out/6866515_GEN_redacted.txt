@@ -1,0 +1,82 @@
+Our Ref: AL/SA/[MED-ID]
+ 
+[DATE]
+
+
+General Letter [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+Division B
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+ 
+
+
+ 
+ 
+Dear [PROVIDER-NAME] [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], NHS Number: [NHS-NO]
+
+
+
+[NAME] is to inform you that [NAME] patient's appointment in the Lung Cancer clinic was cancelled as his EBUS (endobronchial ultrasound) fine needle aspiration of mediastinal lymph node was non diagnostic.
+
+ 
+
+As of [NAME], I have contacted his wife and explained the need for him to see the thoracic surgeon for consideration of a mediastinoscopy and lymph node biopsy.
+
+ 
+
+Mr [NAME] kindly organised [NAME] patient's appointment at very short notice for [NAME] coming Friday. 
+
+ 
+
+ 
+
+Yours sincerely
+
+ 
+
+Checked but not signed to avoid delay.
+
+ 
+
+Anastasios Lekkas FRCP
+
+Consultant Chest Physician
+
+ 
+
+
+Copies to:
+
+
+ 
+
+ 
+
+Mr [NAME] surgeon
+
+D Level, North Wing
+
+SGH
+
+ 
+
+ 
+
+Mr [NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]

@@ -1,0 +1,62 @@
+Our Ref: TEM/n/[MED-ID]
+ 
+[DATE]
+
+
+Clinic Letter : [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+
+
+Dear [PROVIDER-NAME] [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], NHS Number: [NHS-NO]
+
+
+
+I reviewed Mr [NAME] clinic today following the recent CT scan of his nose and paranasal sinuses.  This showed a minor deviation of the nasal septum but did not show any significant underlying sinus disease.
+
+ 
+
+He continues to feel bunged up much of the time with some nasal obstruction, particularly in the morning.  He has been using a nasal decongestant on a daily basis for some years.  He has had no recent improvement with Betnesol drops.
+
+ 
+
+I have explained that topical decongestants can paradoxically make the nose worse rather than better if used on long-term basis . I therefore suggested that he stop this.  You may wish to consider putting back on to a nasal steroid spray.  I doubt that any formal surgery will improve his symptoms.  I have not arranged to review him again routinely.
+
+ 
+
+With best wishes.
+
+ 
+
+
+
+
+Yours sincerely
+
+
+
+
+
+
+ 
+
+Mr [NAME] (ORL-HNS)
+
+Consultant ENT Surgeon

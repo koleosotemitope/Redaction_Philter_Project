@@ -1,0 +1,50 @@
+Our Ref: (T) /JR/[MED-ID]
+ 
+[DATE]
+
+
+Clinic Letter [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+Division D
+[ADDRESS]
+[ADDRESS]
+[ADDRESS], Mailpoint  [ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+ 
+
+
+Dear [PROVIDER-NAME] [NAME]
+[ADDRESS]  [ADDRESS]  [POSTCODE]
+DOB: [DATE]  Hospital Number: [MED-ID]  [ADDRESS] Number: [NHS-NO]
+
+I reviewed this pleasant 62 year old gentleman in the Vascular Clinic today.  He underwent a right false femoral aneurysm repair in [DATE]. Following that he unde[NAME] an aortic valve replacement under the care of [NAME] [NAME].
+ 
+I am pleased to say that under the care of [NAME] [NAME] good progress. He told me that the groin wounds took a little time to heal and he has some reduced sensation in the inner aspect of his right thigh. He is back to his activities of daily living and working again.
+ 
+On examination today this gentleman looks well. The groin wound has now completely healed. He has a full complement of very easily palpable pulses.
+ 
+I have reassured under the care of [NAME] [NAME] sensation in his leg is likely to improve with time and discharged him back into your care.
+
+
+
+Yours sincerely
+
+
+
+ 
+[DICTATION-META]
+
+
+
+
+
+Miss [NAME]

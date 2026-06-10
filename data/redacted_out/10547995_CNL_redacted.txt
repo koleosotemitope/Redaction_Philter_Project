@@ -1,0 +1,62 @@
+Our Ref: (T) mb/ss/[MED-ID]
+ 
+[DATE]
+
+
+Clinic Letter [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+Division B
+[ADDRESS]
+[ADDRESS]
+CG8, G level, Mailpoint  [ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+ 
+
+
+Dear [PROVIDER-NAME] [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], NHS Number: [NHS-NO]
+
+
+
+Diagnoses:
+
+
+
+Crohn's colitis
+Iron deficiency anaemia
+
+Medication: Infliximab x4 doses.
+
+
+
+
+I reviewed [NAME] in clinic today following a call to the helpline. She has had four doses of Infliximab and was unsure she was developing skin problems and some hair loss. My initial thought that she was developing a TNF-related psoriasis. On examination she does have some small patches of dry eczema behind her knees, small patch mid abdomen and some patches of potential psoriasis on hairline behind her ears. She reports that these were worse initially after she has had her Infliximab infusion and improve and settle down as she comes to her next dose. She is due her Infliximab next Thursday and this is probably why her symptoms have settled. She has obviously had significant side effects from a lot of the medications and I am therefore fairly reluctant to make any significant changes. I have informed [NAME] that whilst I do not expect her to tolerate significant side effects I would like her to at least have a further dose of Infliximab and review things then. I have asked that she continue with mercaptopurine at the current dose of 50 milligrams daily and I have issued her with a two-month prescription for her to continue this. We are planning to meet up again following her infusion to assess the side effects. Assuming all remains settled we can continue with Infliximab on its own with a possibility of reducing her mercaptopurine dose to see if this helps with any of the fatigue and hair loss. She has been reading up on other medications and is not keen on vedolizumab or methotrexate. For future information she is unable to self-inject and therefore either subcut methotrexate or Humira or golimumab are not going to be an option. However I am hopeful that we can continue with the Infliximab infusions and particularly as it has had a quite dramatic improvement not only in her bowels but also in her joints. [NAME] is happy with this plan and assuming all goes well we will see her formally back in clinic in six months' time.
+
+
+
+
+
+With kind regards
+
+
+
+
+Yours sincerely
+
+ 
+
+ 
+
+Sister [NAME]c (Hons)
+
+Biologics CNS Independent Nurse [NAME] signature will go here DO NOT REMOVE

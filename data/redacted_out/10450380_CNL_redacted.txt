@@ -1,0 +1,73 @@
+Our Ref: (T) RH/AS/[MED-ID]
+ 
+[PROVIDER-NAME]
+[PROVIDER-NAME]
+[PROVIDER-NAME]
+[ADDRESS]
+[DATE]
+
+
+Clinic Letter [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+Division B
+[ADDRESS]
+[ADDRESS]
+Room 145, Mailpoint  [ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+ 
+
+
+Dear [PROVIDER-NAME] [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], NHS Number: [NHS-NO]
+
+
+
+Diagnoses:
+
+Pan-ulcerative colitis diagnosed 2010
+Type 2 diabetes on insulin
+CKD
+Bile salt malabsorption
+Mental health issues
+
+
+
+
+Medications: Mercaptopurine 25 mg OD,  Allopurinol 100 mg od.
+
+
+
+
+I reviewed Valerie in our IBD Clinic today. Her bowels are opening four or five times per day. She stopped her Cholestagel therapy as it was causing severe constipation. I have discussed that she could try very low dose cholestagel or cholestyramine if she did wish to reduced her bowel motion frequency. [NAME] tells me she is having regular blood tests with yourselves in Salisbury due to her renal function and hyperkalaemia. Indeed the potassium on blood tests done yesterday was 5.5.
+
+ 
+
+With regards to her bowels things are fairly stable she opens them between four and five times per day. She has no rectal bleeding. Her blood tests show a picture of anaemia of chronic disease with the CRP of 23. I note her most recent endoscopy showed very little in the way of active disease and it may be the CRP relates to her adiposity.
+
+ 
+
+[NAME] has been  no changes to her medication but we will see her again in 6 to 12 months' time.
+
+
+Yours sincerely
+
+
+
+Electronic signature will go here DO NOT REMOVE
+
+
+
+
+[PROVIDER-NAME]
+
+IBD Research Fellow to [PROVIDER-NAME]

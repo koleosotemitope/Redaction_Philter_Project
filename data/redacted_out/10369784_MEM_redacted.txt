@@ -1,0 +1,56 @@
+Our Ref: RESEARCH/[MED-ID]	 
+ 	 
+	
+	
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+[ADDRESS]
+	Telephone: [PHONE]
+	Fax: [PHONE]
+ 	 
+	[DATE]
+
+
+To:	Casenotes 
+From:	 Gastroenterology Research Team
+Date:	[DATE] 
+Subject:	Hospital Number: [MED-ID] NHS Number: [NHS-NO]
+MR [NAME] of Paediatric Inflammatory Bowel Disease
+
+PI name: [PROVIDER-NAME], [PROVIDER-NAME], [PROVIDER-NAME]
+
+Research team contact name: [NAME]evell, Charlene Seaborn, Kelly Blackmore, Susan Girvan
+
+Contact telephone number: [PHONE]
+
+R&D reference number: CHI 0497                       LREC 09/HO504/125
+
+ 
+
+Participant approached by letter with [NAME] [MED-ID] Sheet, and invitation letter.
+
+[NAME] agreed to participate.
+
+Informed consent given by [NAME] [MED-ID] discussion of the study and time allowed for questions.
+
+Attended Wellcome Trust Clinical Research Facility with Research Nurse for single research visit.
+
+Questionnaire partially completed with [NAME] and permission by [NAME] for research staff to review medical notes to complete questionnaire details.
+
+Blood sample taken as per Trust policy, and transported to Duthie building -80 freezer.
+
+Copy of consent form and [NAME] [MED-ID] sheet placed in medical notes.
+
+Contact with GP not indicated in study protocol.
+
+No further visits with [NAME] [MED-ID] at this time.
+
+[NAME] [MED-ID] for their time.  
+
+ 
+
+Kelly Blackmore
+
+Lower GI Research Nurse

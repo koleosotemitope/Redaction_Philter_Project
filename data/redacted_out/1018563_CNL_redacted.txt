@@ -1,0 +1,51 @@
+[PROVIDER-NAME]
+[PROVIDER-NAME]
+[PROVIDER-NAME]
+ 
+ 
+Our Ref: (T) AJ/mp/[MED-ID]
+ 
+[DATE]
+
+
+Clinic Letter : [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+Division of Unscheduled Care
+[ADDRESS]
+[ADDRESS]
+[ADDRESS], Mailpoint [ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+
+
+Dear [PROVIDER-NAME] [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], [ADDRESS] Number: [NHS-NO]
+
+
+
+Diagnosis: Indeterminate left sided colitis
+
+
+
+
+I reviewed this gentleman in clinic today. He is well. His weight has increased slightly. His appetite is good. He is opening his bowels once or twice a day and he is getting on with the Salofalk 3 grams once a day and one enema of Salofalk alternative days. I reviewed his blood tests from last week and these were all fine.
+
+ 
+
+We will see him again in six months' time. He could wean himself off of the enemas over the next month or so.
+
+
+
+
+Yours sincerely
+[PROVIDER-NAME]
+Locum Consultant Gastroenterologist

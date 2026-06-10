@@ -1,0 +1,44 @@
+Our Ref: (T) FEL/NT/[MED-ID]
+ 
+[DATE]
+
+
+General Letter [DATE]
+ 
+Miss [NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+Division B
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+ 
+
+
+Dear Miss [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], [ADDRESS] Number: [NHS-NO]
+
+
+
+The blood tests you had taken after your recent gastroenterology appointment show that you are low in vitamin D. [NAME] can be replaced by a weekly tablet supplement which you will need to take for six weeks. I have written to your GP who will hopefully be able to provide [NAME] for you. The rest of your blood tests were entirely normal.
+
+
+
+
+Yours sincerely
+
+
+
+Electronic signature will go here DO NOT REMOVE
+
+
+[PROVIDER-NAME]
+Gastroenterology Registrar

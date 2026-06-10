@@ -1,0 +1,58 @@
+Nurse [NAME]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+
+
+
+
+
+Patient [MED-ID]
+Patient [MED-ID]:	[NAME]:	0096218
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+NHS Number:	 [NHS-NO]
+Date of Birth:	[DATE]
+GP:	Dr [NAME]
+
+
+ 
+Date of review	[DATE]	
+Pick
+
+
+Observations
+BP:	120/75 	HR:	 76	O2 Sats:	 98% on air
+Weight:	 103kgs	Height:	 1.84M	BMI:	 30
+
+
+ 	Comments
+Diagnosis	  Stage 111 Sarcoidosis
+Co-morbidities	Yes | No	 
+PMH	Yes | No	 Inflammatory Bowel Disease
+Allergies	Yes | No	 
+Drugs	  Azathioprine 25mgs od.Prednisolone 5mgs od.
+Asbestos exposure	Yes | No	 
+Smoking history	Yes | No	 
+Flu jab	Yes | No
+Pneumonia Vaccine	Yes | No
+PFT's
+FEV	Yes | No	 3.01 79% pred
+FVC	Yes | No	 4.41 88% pred
+TLCO	Yes | No	 9.10 87% pred
+Bloods	Yes | No	 stable
+6MWT	Yes | No	 
+
+
+Comments
+ 
+ Feeling less tired. Still working 60-65hrs a week as a tanker driver. [NAME] had a flu jab. Bowels stable. No cough or SOB.PFT's stable from July. No recent chest infections. Remains well. Continue current drug regime. F/U ILD OP March 2018 with a chest x-ray and PFT's beforehand.
+
+
+
+Reviewed completed by	Mrs [PROVIDER-NAME] date	[DATE]

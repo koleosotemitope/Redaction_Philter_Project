@@ -30,6 +30,7 @@ pip3 install -r requirements.txt
 
 Run a local Streamlit GUI to upload documents, redact PHI, and download PDF outputs.
 
+<<<<<<< HEAD
 Install GUI dependencies:
 
 ```bash
@@ -41,6 +42,13 @@ Windows (recommended):
 ```powershell
 .\.venv311\Scripts\python.exe -m pip install -r requirements_gui.txt
 .\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py
+=======
+Windows (recommended):
+
+```powershell
+uv sync
+uv run streamlit run .\gui_pdf_redactor.py
+>>>>>>> 32d52ad (new branch)
 ```
 
 The app lets you:

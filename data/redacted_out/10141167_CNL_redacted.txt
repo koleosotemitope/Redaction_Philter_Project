@@ -1,0 +1,76 @@
+Our Ref: (T) FC/RB/[MED-ID]
+ 
+[PROVIDER-NAME]
+[PROVIDER-NAME]
+[PROVIDER-NAME]
+[ADDRESS]
+ 
+[DATE]
+
+
+Clinic Letter [DATE]
+[PROVIDER-NAME]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[ADDRESS]
+[POSTCODE]
+	
+Division B
+[ADDRESS]
+[ADDRESS]
+CE145 Level E, Mailpoint  [ADDRESS]
+[ADDRESS]
+[POSTCODE]
+ 
+Telephone: [PHONE]Fax: [PHONE]
+ 
+
+
+Dear [PROVIDER-NAME] [NAME], [ADDRESS]. [POSTCODE]
+DOB: [DATE], Hospital Number: [MED-ID], [ADDRESS] Number: [NHS-NO]
+
+
+
+Diagnoses :
+
+Ileocolonic Crohn's disease
+Multiple drug intolerances
+
+
+
+
+Current Medication: Nil.
+
+
+
+
+I reviewed [NAME] today at the IBD Clinic. Certainly she is feeling better off vedolizumab with no shortness of breath or other side effects that she was experiencing. Her recent MRE showed an improvement in her levels of inflammation in her small bowel. On balance I think that it is wise stopping the vedolizumab and then considering starting her on ustekinumab when it becomes available. She found it very difficult to tolerate the MRE scan in particular the oral prep. I have therefore suggested that we get a baseline calprotectin today and that we use that to monitor her disease activity. I will see her in five months' time but no doubt she will contact the service should she run into trouble in the meantime.
+
+
+
+
+With best wishes
+
+
+
+
+Yours sincerely
+
+
+
+
+
+
+[PROVIDER-NAME]
+
+Consultant Gastroenterologist
+
+
+
+
+
+
+
+
+Electronic signature will go here DO NOT REMOVE
