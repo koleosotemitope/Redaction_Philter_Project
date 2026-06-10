@@ -14,7 +14,6 @@ dist/
 # Data files and directories
 data/
 data/**/*
-test_input.txt
 
 # Output directories
 redacted_out/
@@ -26,8 +25,15 @@ redacted_out_pdf/**/*
 tmp_pteredactyl/
 tmp_*/
 
-# Jupyter notebooks (optional - uncomment if you don't want to track notebooks)
-# *.ipynb
+# Ignore all txt, html, pdf, png files EXCEPT requirements files
+*.txt
+!requirements*.txt
+*.html
+*.pdf
+*.png
+
+# Jupyter notebooks
+*.ipynb
 
 # OS files
 .DS_Store
