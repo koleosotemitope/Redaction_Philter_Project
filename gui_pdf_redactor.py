@@ -42,51 +42,12 @@ def apply_pteredactyl_redaction(text: str) -> str:
     global _PTEREDACTYL_ANALYSER
     global _PTEREDACTYL_REGEX_ANALYSER
 
-<<<<<<< HEAD
-=======
     # Disable SSL verification for Hugging Face downloads (corporate network)
     import os
     os.environ["HF_HUB_DISABLE_SSL"] = "1"
     os.environ["REQUESTS_CA_BUNDLE"] = ""
     os.environ["CURL_CA_BUNDLE"] = ""
 
-    # Disable SSL verification for Hugging Face downloads (corporate network)
-    import os
-    os.environ["HF_HUB_DISABLE_SSL"] = "1"
-    os.environ["REQUESTS_CA_BUNDLE"] = ""
-    os.environ["CURL_CA_BUNDLE"] = ""
-
-    # Disable SSL verification for Hugging Face downloads (corporate network)
-    import os
-    os.environ["HF_HUB_DISABLE_SSL"] = "1"
-    os.environ["REQUESTS_CA_BUNDLE"] = ""
-    os.environ["CURL_CA_BUNDLE"] = ""
-
-    # Disable SSL verification for Hugging Face downloads (corporate network)
-    import os
-    os.environ["HF_HUB_DISABLE_SSL"] = "1"
-    os.environ["REQUESTS_CA_BUNDLE"] = ""
-    os.environ["CURL_CA_BUNDLE"] = ""
-
-    # Disable SSL verification for Hugging Face downloads (corporate network)
-    import os
-    os.environ["HF_HUB_DISABLE_SSL"] = "1"
-    os.environ["REQUESTS_CA_BUNDLE"] = ""
-    os.environ["CURL_CA_BUNDLE"] = ""
-
-    # Disable SSL verification for Hugging Face downloads (corporate network)
-    import os
-    os.environ["HF_HUB_DISABLE_SSL"] = "1"
-    os.environ["REQUESTS_CA_BUNDLE"] = ""
-    os.environ["CURL_CA_BUNDLE"] = ""
-
-    # Disable SSL verification for Hugging Face downloads (corporate network)
-    import os
-    os.environ["HF_HUB_DISABLE_SSL"] = "1"
-    os.environ["REQUESTS_CA_BUNDLE"] = ""
-    os.environ["CURL_CA_BUNDLE"] = ""
-
->>>>>>> 32d52ad (new branch)
     try:
         import pteredactyl as pt  # type: ignore
     except Exception:
@@ -149,25 +110,6 @@ def apply_pteredactyl_redaction(text: str) -> str:
     except Exception as e:
         print(f"[DEBUG] pteredactyl token mapping failed: {e}")
         return text
-<<<<<<< HEAD
-=======
-        redacted = redacted.replace("<PERSON>", "[NAME]")
-        redacted = redacted.replace("<LOCATION>", "[ADDRESS]")
-        redacted = redacted.replace("<ORGANIZATION>", "[ORG-NAME]")
-        redacted = redacted.replace("<AGE>", "[AGE]")
-        redacted = redacted.replace("<PHONE_NUMBER>", "[PHONE]")
-        redacted = redacted.replace("<DATE_TIME>", "[DATE]")
-        redacted = redacted.replace("<DEVICE>", "[SERIAL-NO]")
-        redacted = redacted.replace("<ZIP>", "[ZIP]")
-        redacted = redacted.replace("<PROFESSION>", "[OCCUPATION-ID]")
-        redacted = redacted.replace("<USERNAME>", "[USERNAME]")
-        redacted = redacted.replace("<ID>", "[MED-ID]")
-
-        return redacted
-    except Exception as e:
-        print(f"[DEBUG] pteredactyl token mapping failed: {e}")
-        return text
->>>>>>> 32d52ad (new branch)
 
 
 def ensure_unique_name(name: str, seen: dict[str, int]) -> str:
