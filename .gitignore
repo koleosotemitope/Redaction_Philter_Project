@@ -48,5 +48,3 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
-uv.lock
-test_input.txt
