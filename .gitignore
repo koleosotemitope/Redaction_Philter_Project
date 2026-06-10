@@ -1,0 +1,44 @@
+# Python
+.venv/
+uv.lock
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+build/
+dist/
+*.egg-info/
+
+# Data files and directories
+data/
+data/**/*
+test_input.txt
+
+# Output directories
+redacted_out/
+redacted_out_pdf/
+redacted_out/**/*
+redacted_out_pdf/**/*
+
+# Temporary directories
+tmp_pteredactyl/
+tmp_*/
+
+# Jupyter notebooks (optional - uncomment if you don't want to track notebooks)
+# *.ipynb
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# Environment variables
+.env
+.env.local
