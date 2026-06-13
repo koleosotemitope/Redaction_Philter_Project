@@ -42,11 +42,8 @@ def apply_pteredactyl_redaction(text: str) -> str:
     global _PTEREDACTYL_ANALYSER
     global _PTEREDACTYL_REGEX_ANALYSER
 
-    # Disable SSL verification for Hugging Face downloads (corporate network)
-    import os
-    os.environ["HF_HUB_DISABLE_SSL"] = "1"
-    os.environ["REQUESTS_CA_BUNDLE"] = ""
-    os.environ["CURL_CA_BUNDLE"] = ""
+    # Use the locally cached model — never reach out to huggingface.co
+    _LOCAL_MODEL_PATH = r"C:\Users\koleot\.cache\huggingface\hub\models--StanfordAIMI--stanford-deidentifier-base\snapshots\661b9c1c717d3165512d440abc3700c386aefab6"
 
     try:
         import pteredactyl as pt  # type: ignore
@@ -56,6 +53,7 @@ def apply_pteredactyl_redaction(text: str) -> str:
     try:
         if _PTEREDACTYL_ANALYSER is None:
             _PTEREDACTYL_ANALYSER = pt.create_analyser(
+                model_path=_LOCAL_MODEL_PATH,
                 regex_entities=pt.DEFAULT_REGEX_ENTITIES,
             )
 

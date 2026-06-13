@@ -1,223 +1,301 @@
+# Redaction Philter Project
 
-If you use this software for any publication, please cite:
-Norgeot, B., Muenzen, K., Peterson, T.A. et al. Protected Health Information filter (Philter): accurately and securely de-identifying free-text clinical notes. npj Digit. Med. 3, 57 (2020). https://doi.org/10.1038/s41746-020-0258-y
+A clinical text de-identification tool that removes Protected Health Information (PHI) from free-text clinical notes. Built on top of [Philter (UCSF)](https://github.com/UCSF-DSCOLAB/philter), extended with a Streamlit GUI, PDF export, UK-specific PHI patterns, and optional [pteredactyl](https://pypi.org/project/pteredactyl/) NER-based redaction.
 
-# Installing Philter
+> **Citation:** If you use this software for any publication, please cite:
+> Norgeot, B., Muenzen, K., Peterson, T.A. et al. *Protected Health Information filter (Philter): accurately and securely de-identifying free-text clinical notes.* npj Digit. Med. 3, 57 (2020). https://doi.org/10.1038/s41746-020-0258-y
 
-To install Philter from PyPi, run the following command:
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Quick Start (Recommended)](#quick-start-recommended)
+3. [Installing Philter (PyPI)](#installing-philter-pypi)
+4. [Installing Requirements](#installing-requirements)
+5. [GUI Document Redaction (Streamlit)](#gui-document-redaction-streamlit)
+6. [Running Philter: Command-Line Guide](#running-philter-command-line-guide)
+7. [Project Runbook (Windows)](#project-runbook-windows)
+8. [Common Errors and Fixes](#common-errors-and-fixes)
+9. [Git Quick Start](#git-quick-start)
+10. [Teammate Setup Checklist](#teammate-setup-checklist)
+
+---
+
+## Overview
+
+This project provides two ways to de-identify clinical notes:
+
+| Method | Best for |
+|---|---|
+| **Streamlit GUI** (`gui_pdf_redactor.py`) | Interactive use — upload files, choose redaction mode, download redacted PDFs |
+| **Command-line** (`main.py`) | Batch processing of large note collections |
+
+**Supported input formats:** `PDF`, `DOC`, `DOCX`, `HTML/HTM`, `TXT`, `JPEG/JPG` (and other image formats via OCR)
+
+**Redaction modes (GUI):**
+- **Full Philter** — redacts all PHI everywhere in the document
+- **Body-aware** — full Philter in the header, targeted PHI patterns in the body
+- **Targeted-only** — whole document, preserves medications/common clinical words while redacting configured PHI patterns
+
+---
+
+## Quick Start (Recommended)
+
+> **Prerequisites:** Python 3.11, [`uv`](https://github.com/astral-sh/uv) package manager
+
+```powershell
+# 1. Clone the repo
+git clone https://github.com/koleosotemitope/Redaction_Philter_Project.git
+cd Redaction_Philter_Project
+
+# 2. Install all dependencies (including GUI + pteredactyl)
+uv sync
+
+# 3. Launch the Streamlit GUI
+uv run streamlit run .\gui_pdf_redactor.py
+```
+
+Open your browser at: **http://localhost:8501**
+
+---
+
+## Installing Philter (PyPI)
+
+To install the core Philter package from PyPI:
 
 ```bash
 pip3 install philter-ucsf
 ```
 
-The main philter code will be executed by running:
+Run Philter from the installed package:
 
 ```bash
-python3 -m philter_ucsf [flags, see below]
+python3 -m philter_ucsf [flags]
 ```
 
-However, we strongly suggest that you download the project source code and run all sample commands below from the home directory before running the install version of Philter.
+> We strongly recommend downloading the project source code and running all sample commands from the project root before using the installed package version.
 
-# Installing Requirements
+---
 
-To install the Python requirements, run the following command:
+## Installing Requirements
+
+### Base requirements
 
 ```bash
 pip3 install -r requirements.txt
 ```
 
-## GUI Document Redaction (Streamlit)
-
-Run a local Streamlit GUI to upload documents, redact PHI, and download PDF outputs.
-
-<<<<<<< HEAD
-Install GUI dependencies:
+### GUI requirements (Streamlit + pteredactyl)
 
 ```bash
 pip3 install -r requirements_gui.txt
 ```
 
-Windows (recommended):
+### OCR/PDF conversion requirements
 
-```powershell
-.\.venv311\Scripts\python.exe -m pip install -r requirements_gui.txt
-.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py
-=======
-Windows (recommended):
+```bash
+pip3 install -r requirements_ocr.txt
+```
+
+> For image OCR, also install system [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) and ensure `tesseract` is available on your `PATH`.
+
+---
+
+## GUI Document Redaction (Streamlit)
+
+### Launch
+
+**Windows (with `uv`):**
 
 ```powershell
 uv sync
 uv run streamlit run .\gui_pdf_redactor.py
->>>>>>> 32d52ad (new branch)
 ```
 
-The app lets you:
-- Upload one or more files in these formats: `PDF`, `DOC`, `DOCX`, `HTML/HTM`, `TXT`, `JPEG/JPG`.
-- Choose redaction mode:
-	- Full Philter (all PHI everywhere)
-	- Body-aware (full in header + targeted in body)
-	- Targeted-only (whole document, preserves medications/common words)
-- Optionally enable full `pteredactyl` entities as an extra pass (PERSON, LOCATION, ORGANIZATION, IDs, dates, phones, plus regex entities).
-- Run PHI redaction using your filter config.
-- Download individual redacted PDFs or a ZIP bundle.
-- Save generated PDFs to `data/redacted_out_pdf/`.
+**Windows (with venv):**
 
-### Layered Rules: Existing Rules + pteredactyl
+```powershell
+.\.venv311\Scripts\python.exe -m pip install -r requirements_gui.txt
+.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py
+```
 
-The GUI now supports a layered redaction flow:
+**Linux / macOS:**
 
-1. Project rules run first (your existing Philter + targeted regex rules).
-2. If enabled, full `pteredactyl` entities run second as an additional pass.
+```bash
+pip3 install -r requirements_gui.txt
+python3 -m streamlit run gui_pdf_redactor.py
+```
 
-This means your previous rules are preserved and **not replaced**.
+### What the GUI does
 
-Current `pteredactyl` entities used in the GUI pass:
-- NER entities: `PERSON`, `LOCATION`, `ORGANIZATION`, `AGE`, `PHONE_NUMBER`, `DATE_TIME`, `DEVICE`, `ZIP`, `PROFESSION`, `USERNAME`, `ID`
-- Regex entities: `NHS_NUMBER`, `POSTCODE`, `EMAIL_ADDRESS`
+- Upload one or more files: `PDF`, `DOC`, `DOCX`, `HTML/HTM`, `TXT`, `JPEG/JPG`
+- Choose a redaction mode (Full Philter / Body-aware / Targeted-only)
+- Optionally enable the `pteredactyl` extra pass for NER-based entity redaction
+- Download individual redacted PDFs or a ZIP bundle
+- Saves generated PDFs to `data/redacted_out_pdf/`
 
-In output, pteredactyl tokens are normalized to this project's placeholders:
-- `<PERSON>` -> `[NAME]`
-- `<LOCATION>` -> `[ADDRESS]`
-- `<ORGANIZATION>` -> `[ORG-NAME]`
-- `<AGE>` -> `[AGE]`
-- `<PHONE_NUMBER>` -> `[PHONE]`
-- `<DATE_TIME>` -> `[DATE]`
-- `<DEVICE>` -> `[SERIAL-NO]`
-- `<ZIP>` -> `[ZIP]`
-- `<PROFESSION>` -> `[OCCUPATION-ID]`
-- `<USERNAME>` -> `[USERNAME]`
-- `<ID>` -> `[MED-ID]`
-- `<NHS_NUMBER>` -> `[NHS-NO]`
-- `<POSTCODE>` -> `[POSTCODE]`
-- `<EMAIL_ADDRESS>` -> `[EMAIL]`
+### Layered Redaction: Project Rules + pteredactyl
 
-Enable/disable this behavior from the GUI checkbox:
-- `Use full pteredactyl entities (PERSON, LOCATION, ORG, IDs, dates, phones, regex)`
+The GUI supports a two-pass layered redaction flow:
 
-# Running Philter: A Step-by-Step Guide
+1. **Pass 1 — Project rules:** your existing Philter regex/filter rules run first
+2. **Pass 2 — pteredactyl (optional):** full NER + regex entity pass runs second as an additional layer
 
-Philter is a command-line based clinical text de-identification software that removes protected health information (PHI) from any plain text file. Although the software has built-in evaluation capabilities and can compare Philter PHI-reduced notes with a corresponding set of ground truth annotations, annotations are not required to run Philter. The following steps may be used to 1) run Philter in the command line without ground truth annotations, or 2) generate Philter-compatible annotations and run Philter in evaluation mode using ground truth annotations. Although any set of notes and corresponding annotations may be used with Philter, the examples provided here will correspond to the I2B2 dataset, which Philter uses in its default configuration. 
+Your existing rules are **preserved and not replaced**.
 
-Before running Philter either with or without evaluation, make sure to familiarize yourself with the various options that may be used for any given Philter run:
+#### pteredactyl entities used
 
-### Flags:
-**-i (input):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path to the directory or the file that contains the clinical note(s), the default is ./data/i2b2_notes/<br/>
-**-a (anno):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path to the directory or the file that contains the PHI annotation(s), the default is ./data/i2b2_anno/<br/>
-**-o (output):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path to the directory to save the PHI-reduced notes in, the default is ./data/i2b2_results/<br/>
-**-f (filters):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path to the config file, the default is ./configs/philter_delta.json<br/>
-**-x (xml):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path to the json file that contains all xml data, the default is ./data/phi_notes.json<br/>
-**-c (coords):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Output path to the json file that will contain the coordinate map data, the default is ./data/coordinates.json<br/>
-**-v (verbose):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;When verbose is true, will emit messages about script progress. The default is True<br/>
-**-e (run_eval):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;When run_eval is true, will run our eval script and emit summarized results to terminal<br/>
-**-t (freq_table):**&nbsp;&nbsp;&nbsp;&nbsp;When freqtable is true, will output a unigram/bigram frequency table of all note words and their PHI/non-PHI counts. Default is False<br/>
-**-n (initials):**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;When initials is true, will include annotated initials PHI in recall/precision calculations. The default is True<br/>
-**--eval_output:**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path to the directory that the detailed eval files will be outputted to, the default is ./data/phi/<br/>
-**--outputformat:**&nbsp;&nbsp;Define format of annotation, allowed values are \"asterisk\", \"i2b2\". Default is \"asterisk\"<br/>
-**--ucsfformat:**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;When ucsfformat is true, will adjust eval script for slightly different xml format. The default is False<br/>
-**--prod:**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;When prod is true, this will run the script with output in i2b2 xml format without running the eval script. The default is False<br/>
-**--cachepos:**&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Path to a directoy to store/load the pos data for all notes. If no path is specified then memory caching will be used<br/>
+| Entity type | Placeholder |
+|---|---|
+| `<PERSON>` | `[NAME]` |
+| `<LOCATION>` | `[ADDRESS]` |
+| `<ORGANIZATION>` | `[ORG-NAME]` |
+| `<AGE>` | `[AGE]` |
+| `<PHONE_NUMBER>` | `[PHONE]` |
+| `<DATE_TIME>` | `[DATE]` |
+| `<DEVICE>` | `[SERIAL-NO]` |
+| `<ZIP>` | `[ZIP]` |
+| `<PROFESSION>` | `[OCCUPATION-ID]` |
+| `<USERNAME>` | `[USERNAME]` |
+| `<ID>` | `[MED-ID]` |
+| `<NHS_NUMBER>` | `[NHS-NO]` |
+| `<POSTCODE>` | `[POSTCODE]` |
+| `<EMAIL_ADDRESS>` | `[EMAIL]` |
 
-## 0. Curating I2B2 XML Files
-To remove non-HIPAA PHI annotations from the I2B2 XML files, run the following command:
+Enable or disable this pass from the GUI checkbox:
+> `Use full pteredactyl entities (PERSON, LOCATION, ORG, IDs, dates, phones, regex)`
 
-**-i** Path to the directory that contains the original I2B2 xml files<br/>
-**-o** Path to the directory where the curated files will be written<br/>
+---
+
+## Running Philter: Command-Line Guide
+
+Philter is a command-line clinical text de-identification tool. It does not require ground-truth annotations to run, but can optionally use them for evaluation.
+
+### Flags
+
+| Flag | Description | Default |
+|---|---|---|
+| `-i` / `--input` | Path to input directory or file | `./data/i2b2_notes/` |
+| `-a` / `--anno` | Path to annotation directory or file | `./data/i2b2_anno/` |
+| `-o` / `--output` | Path to output directory | `./data/i2b2_results/` |
+| `-f` / `--filters` | Path to config file | `./configs/philter_delta.json` |
+| `-x` / `--xml` | Path to JSON file with XML data | `./data/phi_notes.json` |
+| `-c` / `--coords` | Output path for coordinate map JSON | `./data/coordinates.json` |
+| `-v` / `--verbose` | Emit progress messages | `True` |
+| `-e` / `--run_eval` | Run eval script and emit results | `True` |
+| `-t` / `--freq_table` | Output unigram/bigram frequency table | `False` |
+| `-n` / `--initials` | Include initials PHI in recall/precision | `True` |
+| `--eval_output` | Path for detailed eval output files | `./data/phi/` |
+| `--outputformat` | Output format: `asterisk` or `i2b2` | `i2b2` |
+| `--ucsfformat` | Adjust eval for UCSF XML format | `False` |
+| `--prod` | Production mode (no eval, i2b2 XML output) | `False` |
+| `--cachepos` | Directory to store/load POS cache | memory |
+| `--pdf_output` | Create PDF copies of redacted `.txt` outputs | `False` |
+
+---
+
+### Step 0 — Curate I2B2 XML Files (optional)
+
+Remove non-HIPAA PHI annotations from I2B2 XML files:
 
 ```bash
 python improve_i2b2_notes.py -i data/i2b2_xml/ -o data/i2b2_xml_updated/
 ```
 
-## 1. Running Philter WITHOUT evaluation (no ground-truth annotations required)
+---
 
-**a.** Make sure the input file(s) are in plain text format. If you are using the I2B2 dataset (or any other dataset in XML or other formats), the note text must be extracted from each original file and be saved in individual text files. Examples of properly formatted input files can be found in ./data/i2b2_notes/.
+### Step 1 — Run Philter WITHOUT evaluation
 
-**b.** Store all input file(s) in the same directory, and create an output directory (if you want the PHI-reduced notes to be stored somewhere other than the default location).
+**a.** Ensure input files are in plain text format and stored in a single directory.
 
-**c.** Create a configuration file with specified filters (if you do not want to use the default configuration file).
+**b.** Create an output directory.
 
-**d.** Run Philter in the command line using either default or custom parameters.
+**c.** Optionally create a custom config file.
 
-Use the following command to run a single job and output files in XML format:
+**d.** Run Philter:
+
 ```bash
+# XML output (PHI tags, not redacted text)
 python3 main.py -i ./data/i2b2_notes/ -o ./data/i2b2_results/ -f ./configs/philter_delta.json --prod=True
+
+# Asterisk output (PHI replaced with ***)
+python3 main.py -i ./data/i2b2_notes/ -o ./data/i2b2_results/ -f ./configs/philter_delta.json --prod=True --outputformat "asterisk"
 ```
-IMPORTANT NOTE: XML-formatted files do NOT have PHI-reduced text. Instead, they contain the original note text with the PHI tags identified by Philter. 
 
-### Optional: Convert PDF/HTML/Images to Plain Text First
+> **Note:** XML-formatted output contains the original note text with PHI tags — it does **not** contain redacted text.
 
-Philter processes plain text notes. If your source files are PDF/HTML/JPEG/PNG/TIFF/BMP, convert them to `.txt` first:
+#### Optional: Convert PDF/HTML/Images to Plain Text First
 
 ```bash
 pip3 install -r requirements_ocr.txt
 python3 ./generate_dataset/convert_docs_to_txt.py -i ./data/raw_docs/ -o ./data/ingested_txt/
 ```
 
-Then run Philter using the generated text directory:
+Then run Philter on the converted text:
 
 ```bash
 python3 main.py -i ./data/ingested_txt/ -o ./data/i2b2_results/ -f ./configs/philter_delta.json --prod=True --outputformat "asterisk"
 ```
 
-Notes:
-- For image OCR, install system Tesseract OCR and ensure it is available on PATH.
-- For PDFs, the converter first tries native text extraction and falls back to OCR when needed.
-- For HTML/HTM, tags are stripped and readable text is extracted.
+**Conversion notes:**
+- For image OCR: install system Tesseract OCR and ensure it is on `PATH`
+- For PDFs: native text extraction is tried first; OCR is used as fallback
+- For HTML/HTM: tags are stripped and readable text is extracted
 
-If you'd like to output ONLY the PHI-reduced text with asterisks obscuring Philter-identified PHI, simply add the -outputformat "asterisk" option:
-```bash
-python3 main.py -i ./data/i2b2_notes/ -o ./data/i2b2_results/ -f ./configs/philter_delta.json --prod=True --outputformat "asterisk"
-```
+#### Running multiple jobs in parallel
 
-To run multiple jobs simultaneously, all input notes handled by a single job must be located in separate directories to avoid cross-contamination between output files. For example, if you wanted to run Philter on 1000 notes simultaneously on two processes, the two input directories might look like:
-
-1. ./data/batch1/500_input_notes_batch1/
-2. ./data/batch2/500_input_notes_batch2/
-
-In this example, the following two commands would be used to start running each job in the background:
-```bash
-nohup python3 main.py -i ./data/batch1/500_input_notes_batch2/ -o ./data/i2b2_results_test/ -f ./configs/philter_delta.json --prod=True > ./data/batch1/batch1_terminal_out.txt 2>&1 &
-
-```
-```bash
-nohup python3 main.py -i ./data/batch2/500_input_notes_batch2/ -o ./data/i2b2_results_test/ -f ./configs/philter_delta.json --prod=True > ./data/batch2/batch2_terminal_out.txt 2>&1 &
-
-```
-
-## 2. Running Philter WITH evaluation (ground truth annotations required)
-
-**a.** Create Philter-compatible annotation files using the transformation script located in ./generate_dataset/. This script expects notes in xml format, and transforms each input file into two plain text files: 1) the original note text, and 2) the note text with asterisks obscuring PHI. A properly formatted xml input can be found in ./data/i2b2_xml, and examples of the two outputs can be found in ./data/i2b2_notes and ./data/i2b2_anno, respectively. Additionally, this script creates a .json file that contains the original text from each note, followed by the PHI annotations in json format. An example of this output file can be found at ./data/phi_notes_i2b2.json. This is the file that will be used as the -x default option. 
-
-### Flags:
-
-**-x** Path to the directory file that contains the note xml files<br/>
-**-o** Path to the json file that will contain a summary of the phi in the xml files<br/>
-**-n** Path to the directory where you would like to store the plain text notes<br/>
-**-a** Path to the directory where you would like to store the plain text annotations<br/>
-
-Use the following command to create these input files from notes in XML format:
+Each job must use a separate input directory to avoid cross-contamination:
 
 ```bash
-python3 ./generate_dataset/main_ucsf_updated.py -x ./data/i2b2_xml/ -o ./data/phi_notes_i2b2.json -n ./data/i2b2_notes/ -a ./data/i2b2_anno/
+nohup python3 main.py -i ./data/batch1/ -o ./data/results1/ -f ./configs/philter_delta.json --prod=True > ./data/batch1/out.txt 2>&1 &
+nohup python3 main.py -i ./data/batch2/ -o ./data/results2/ -f ./configs/philter_delta.json --prod=True > ./data/batch2/out.txt 2>&1 &
 ```
-Note: If this command produces an ElementTree.ParseError, you may need to remove .DS_Store from ./data/i2b2_xml.
 
-**b-c.** See Step 1b-c above
+---
 
-**d.** Run Philter in evaluation mode using the following command:
+### Step 2 — Run Philter WITH evaluation
+
+**a.** Generate Philter-compatible annotation files from I2B2 XML:
 
 ```bash
-python3 main.py -i ./data/i2b2_notes/ -a ./data/i2b2_anno/ -o ./data/i2b2_results/ -x ./data/phi_notes_i2b2.json -f=./configs/philter_delta.json --outputformat "asterisk"
+python3 ./generate_dataset/main_ucsf_updated.py \
+  -x ./data/i2b2_xml/ \
+  -o ./data/phi_notes_i2b2.json \
+  -n ./data/i2b2_notes/ \
+  -a ./data/i2b2_anno/
 ```
 
-By defult, this will output PHI-reduced notes (.txt format) in the specified output directory. If this command is used with the --outputformat i2b2 flag (or with no --outputformat specified, since i2b2 format is the default option), the evaluation script will not be run and the script will output notes with the original text and the Philter PHI tags (.xml format) in the specified output directory.
+> If this produces an `ElementTree.ParseError`, remove `.DS_Store` from `./data/i2b2_xml/`.
 
-## 3. Project Runbook (Windows: Step-by-Step Commands + What They Do)
+**b–c.** See Step 1b–c above.
 
-This is the fastest end-to-end workflow for this repo, from raw files to redacted output.
+**d.** Run Philter in evaluation mode:
+
+```bash
+python3 main.py \
+  -i ./data/i2b2_notes/ \
+  -a ./data/i2b2_anno/ \
+  -o ./data/i2b2_results/ \
+  -x ./data/phi_notes_i2b2.json \
+  -f ./configs/philter_delta.json \
+  --outputformat "asterisk"
+```
+
+---
+
+## Project Runbook (Windows)
+
+End-to-end workflow from raw files to redacted output on Windows.
 
 ### A. One-time setup
 
-1. Create and activate your virtual environment.
+1. Create and activate a Python 3.11 virtual environment:
+
+```powershell
+py -3.11 -m venv .venv311
+.\.venv311\Scripts\Activate.ps1
+```
 
 2. Install base runtime dependencies:
 
@@ -225,270 +303,211 @@ This is the fastest end-to-end workflow for this repo, from raw files to redacte
 .\.venv311\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-What this does: installs core Philter packages used by `main.py`.
-
 3. Install OCR/PDF conversion dependencies:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m pip install -r requirements_ocr.txt
 ```
 
-What this does: installs `pytesseract`, `pdf2image`, and related packages used by `generate_dataset/convert_docs_to_txt.py`.
-
-Important: use `.\.venv311\Scripts\python.exe` for all commands below to avoid interpreter mismatch.
-
-### B. If your input is already text (`.txt`)
-
-1. Make sure your text files are in:
-
-```text
-./data/ingested_txt/
-```
-
-2. Create output directory if missing:
-
-```powershell
-New-Item -ItemType Directory -Force .\data\redacted_out | Out-Null
-```
-
-What this does: ensures the output path exists (Philter expects it to exist).
-
-3. Run redaction:
-
-```powershell
-.\.venv311\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
-```
-
-What this does:
-- `-i`: input folder of notes
-- `-o`: output folder for redacted notes
-- `-f`: active regex/filter config
-- `--prod=True`: production redaction run
-- `--outputformat asterisk`: masks detected sensitive text with `*`
-
-### C. If your input is PDF/HTML/image
-
-1. Put source files in:
-
-```text
-./data/raw_docs/
-```
-
-2. Convert to text:
-
-```powershell
-.\.venv311\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py -i .\data\raw_docs\ -o .\data\ingested_txt\
-```
-
-What this does: extracts text from PDFs/images and writes `.txt` files to `./data/ingested_txt/`.
-
-3. Run the same redaction command from section B:
-
-```powershell
-.\.venv311\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
-```
-
-### D. Verify results quickly
-
-1. Open a redacted output file, for example:
-
-```text
-./data/redacted_out/sample_clinical_notes_sensitive.txt
-```
-
-2. Optional keyword checks:
-
-```powershell
-Select-String -Path .\data\redacted_out\*.txt -Pattern 'QQ\s\d{2}\s\d{2}\s\d{2}\s[A-Z]|\b\d{2}-\d{2}-\d{2}\b|\b[A-PR-UWYZ][A-HK-Y]?\d[\dA-HJKSTUW]?\s?\d[ABD-HJLNP-UW-Z]{2}\b'
-```
-
-What this does: searches output files for patterns that resemble UK NI numbers, sort codes, and UK postcodes.
-
-### E. Linux/macOS command equivalents
-
-Use this if you are not on Windows.
-
-1. Create and activate venv:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-2. Install dependencies:
-
-```bash
-python3 -m pip install -r requirements.txt
-python3 -m pip install -r requirements_ocr.txt
-```
-
-3. Convert PDFs/images to text:
-
-```bash
-python3 ./generate_dataset/convert_docs_to_txt.py -i ./data/raw_docs/ -o ./data/ingested_txt/
-```
-
-4. Create output folder:
-
-```bash
-mkdir -p ./data/redacted_out/
-```
-
-5. Run redaction:
-
-```bash
-python3 ./main.py -i ./data/ingested_txt/ -o ./data/redacted_out/ -f ./configs/philter_delta.json --prod=True --outputformat asterisk
-```
-
-6. Optional pattern verification:
-
-```bash
-grep -En 'QQ[[:space:]][0-9]{2}[[:space:]][0-9]{2}[[:space:]][0-9]{2}[[:space:]][A-Z]|[0-9]{2}-[0-9]{2}-[0-9]{2}|[A-PR-UWYZ][A-HK-Y]?[0-9][0-9A-HJKSTUW]?[[:space:]]?[0-9][ABD-HJLNP-UW-Z]{2}' ./data/redacted_out/*.txt
-```
-
----
-
-## 4. Common Errors and Fixes
-
-### Error: missing pdf2image/pytesseract
-
-Symptom:
-
-```text
-FAIL ... (missing pdf2image/pytesseract)
-```
-
-Fix:
-
-```powershell
-.\.venv311\Scripts\python.exe -m pip install -r requirements_ocr.txt
-```
-
-Also ensure you run the correct script path:
-
-```powershell
-.\.venv311\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py ...
-```
-
-### Error: Filepath does not exist for output directory
-
-Symptom:
-
-```text
-Exception: ('Filepath does not exist', '.\\data\\redacted_out\\')
-```
-
-Fix:
-
-```powershell
-New-Item -ItemType Directory -Force .\data\redacted_out | Out-Null
-```
-
-### Error: Resource averaged_perceptron_tagger not found
-
-Symptom:
-
-```text
-LookupError: Resource averaged_perceptron_tagger not found
-```
-
-Fix:
+4. Download required NLTK model (one-time):
 
 ```powershell
 .\.venv311\Scripts\python.exe -c "import nltk; nltk.download('averaged_perceptron_tagger')"
 ```
 
-### Error: re.error global flags not at the start of the expression
+> Use `.\.venv311\Scripts\python.exe` for **all** commands below to avoid interpreter mismatch.
 
-Symptom on Python 3.11+:
+---
 
-```text
-re.error: global flags not at the start of the expression
+### B. Input is already plain text (`.txt`)
+
+1. Place text files in `./data/ingested_txt/`
+
+2. Create the output directory:
+
+```powershell
+New-Item -ItemType Directory -Force .\data\redacted_out | Out-Null
 ```
 
-Cause:
-- Some legacy regex files include inline case-insensitive markers like `(?i)` in the middle of expressions.
+3. Run redaction:
 
-Fix in this repo:
-- `philter.py` and `philter_ucsf/philter.py` now normalize inline `(?i)` markers before compiling regex patterns.
+```powershell
+.\.venv311\Scripts\python.exe .\main.py `
+  -i .\data\ingested_txt\ `
+  -o .\data\redacted_out\ `
+  -f .\configs\philter_delta.json `
+  --prod=True `
+  --outputformat asterisk
+```
 
-### Issue: Last postcode characters are still visible after redaction
+---
 
-Symptom:
+### C. Input is PDF, HTML, or image
+
+1. Place source files in `./data/raw_docs/`
+
+2. Convert to text:
+
+```powershell
+.\.venv311\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py `
+  -i .\data\raw_docs\ `
+  -o .\data\ingested_txt\
+```
+
+3. Run the same redaction command from section B.
+
+---
+
+### D. Verify results
+
+1. Open a redacted output file, e.g. `./data/redacted_out/sample_clinical_notes_sensitive.txt`
+
+2. Optional — search for residual UK patterns (NI numbers, sort codes, postcodes):
+
+```powershell
+Select-String -Path .\data\redacted_out\*.txt `
+  -Pattern 'QQ\s\d{2}\s\d{2}\s\d{2}\s[A-Z]|\b\d{2}-\d{2}-\d{2}\b|\b[A-PR-UWYZ][A-HK-Y]?\d[\dA-HJKSTUW]?\s?\d[ABD-HJLNP-UW-Z]{2}\b'
+```
+
+Expected result: no matches.
+
+---
+
+### E. Linux / macOS equivalents
+
+```bash
+# Create and activate venv
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements_ocr.txt
+
+# Convert PDFs/images to text
+python3 ./generate_dataset/convert_docs_to_txt.py -i ./data/raw_docs/ -o ./data/ingested_txt/
+
+# Create output folder
+mkdir -p ./data/redacted_out/
+
+# Run redaction
+python3 ./main.py -i ./data/ingested_txt/ -o ./data/redacted_out/ -f ./configs/philter_delta.json --prod=True --outputformat asterisk
+
+# Optional pattern verification
+grep -En 'QQ[[:space:]][0-9]{2}[[:space:]][0-9]{2}[[:space:]][0-9]{2}[[:space:]][A-Z]|[0-9]{2}-[0-9]{2}-[0-9]{2}|[A-PR-UWYZ][A-HK-Y]?[0-9][0-9A-HJKSTUW]?[[:space:]]?[0-9][ABD-HJLNP-UW-Z]{2}' ./data/redacted_out/*.txt
+```
+
+---
+
+## Common Errors and Fixes
+
+### `missing pdf2image/pytesseract`
+
+```text
+FAIL ... (missing pdf2image/pytesseract)
+```
+
+**Fix:**
+
+```powershell
+.\.venv311\Scripts\python.exe -m pip install -r requirements_ocr.txt
+.\.venv311\Scripts\python.exe .\generate_dataset\convert_docs_to_txt.py ...
+```
+
+---
+
+### `Filepath does not exist for output directory`
+
+```text
+Exception: ('Filepath does not exist', '.\\data\\redacted_out\\')
+```
+
+**Fix:**
+
+```powershell
+New-Item -ItemType Directory -Force .\data\redacted_out | Out-Null
+```
+
+---
+
+### `Resource averaged_perceptron_tagger not found`
+
+```text
+LookupError: Resource averaged_perceptron_tagger not found
+```
+
+**Fix:**
+
+```powershell
+.\.venv311\Scripts\python.exe -c "import nltk; nltk.download('averaged_perceptron_tagger')"
+```
+
+---
+
+### `re.error: global flags not at the start of the expression` (Python 3.11+)
+
+**Cause:** Some legacy regex filter files include inline `(?i)` markers in the middle of expressions, which is not allowed in Python 3.11+.
+
+**Fix in this repo:** `philter.py` and `philter_ucsf/philter.py` now normalize inline `(?i)` markers before compiling regex patterns. No action needed.
+
+---
+
+### Last postcode characters still visible after redaction
+
+**Symptom:**
 
 ```text
 Address: ** ****** ********, ********, West Yorkshire *** 8JT
 ```
 
-Cause:
-- Existing US ZIP-focused address rules can miss UK inward code fragments.
+**Cause:** Existing US ZIP-focused address rules can miss UK inward code fragments.
 
-Process to fix:
+**Fix:**
 
-1. Add a UK postcode regex file:
-
-```text
-filters/regex/addresses/uk_postcode_transformed.txt
-```
-
-with this pattern:
+1. Add a UK postcode regex file at `filters/regex/addresses/uk_postcode_transformed.txt`:
 
 ```text
 \b(?i)(GIR\s?0AA|[A-PR-UWYZ][A-HK-Y]?\d[\dA-HJKSTUW]?\s?\d[ABD-HJLNP-UW-Z]{2})\b
 ```
 
-2. Register the rule in config files:
-
-- `configs/philter_delta.json`
-- `philter_ucsf/configs/philter_delta.json`
-
-Use a regex rule entry like:
+2. Register the rule in both config files (`configs/philter_delta.json` and `philter_ucsf/configs/philter_delta.json`):
 
 ```json
 {
-	"title": "uk postcode",
-	"type": "regex",
-	"exclude": true,
-	"filepath": "filters/regex/addresses/uk_postcode_transformed.txt",
-	"notes": "This should remove UK postcodes such as BD5 8JT or LS11 4RF"
+    "title": "uk postcode",
+    "type": "regex",
+    "exclude": true,
+    "filepath": "filters/regex/addresses/uk_postcode_transformed.txt",
+    "notes": "This should remove UK postcodes such as BD5 8JT or LS11 4RF"
 }
 ```
 
-3. Re-run redaction:
+3. Re-run redaction and verify:
 
 ```powershell
 .\.venv311\Scripts\python.exe .\main.py -i .\data\ingested_txt\ -o .\data\redacted_out\ -f .\configs\philter_delta.json --prod=True --outputformat asterisk
-```
 
-4. Verify postcodes are fully masked:
-
-```powershell
 Select-String -Path .\data\redacted_out\sample_clinical_notes_sensitive.txt -Pattern '8JT|4RF|6PL|BD5|LS11|M14'
 ```
 
 Expected result: no matches.
 
-### OCR notes
-
-- For scanned PDFs/images, install system Tesseract OCR and ensure `tesseract` is available on PATH.
-- For text-native PDFs, conversion often succeeds without OCR fallback.
+---
 
 ### pteredactyl notes
 
-- `requirements_gui.txt` now includes `pteredactyl`.
-- On first use, `pteredactyl` may download `en_core_web_sm` for spaCy.
-- If CUDA is not installed (or not compatible with your torch build), `pteredactyl` runs on CPU.
-- The GUI attempts full `pteredactyl` entity redaction first; if model loading fails at runtime, it automatically falls back to regex-only pteredactyl entities so processing still completes.
-- You can disable the pteredactyl extra pass in the GUI and still keep all project-native rules.
+- `requirements_gui.txt` includes `pteredactyl`
+- On first use, `pteredactyl` may download `en_core_web_sm` for spaCy
+- If CUDA is not installed (or incompatible with your torch build), `pteredactyl` runs on CPU
+- If model loading fails at runtime, the GUI automatically falls back to regex-only pteredactyl entities so processing still completes
+- You can disable the pteredactyl extra pass in the GUI and still keep all project-native rules
 
 ---
 
-## 5. Git Quick Start (This Repo)
-
-Use these commands to save all your work to Git from the repository root:
+## Git Quick Start
 
 ```powershell
-cd C:\Users\koleot\Downloads\redaction_phil\Redaction_Philter_Project
+cd C:\Users\<USER>\...\Redaction_Philter_Project
 git status
 git add .
 git commit -m "Update redaction GUI, patterns, and README"
@@ -502,7 +521,7 @@ git rev-parse --show-toplevel
 git log --oneline -n 5
 ```
 
-If Git asks for your identity on first commit:
+First-time identity setup:
 
 ```powershell
 git config --global user.name "Your Name"
@@ -511,14 +530,14 @@ git config --global user.email "you@example.com"
 
 ---
 
-## 6. Teammate Setup and Run Checklist (Copy/Paste)
+## Teammate Setup Checklist
 
-Use this section when another user clones the repo and wants the same behavior.
+Use this section when another user clones the repo and wants the same behaviour.
 
 ### A. Clone and enter project folder
 
 ```powershell
-git clone <YOUR_REPO_URL>
+git clone https://github.com/koleosotemitope/Redaction_Philter_Project.git
 cd Redaction_Philter_Project
 ```
 
@@ -541,53 +560,54 @@ py -3.11 -m venv .venv311
 .\.venv311\Scripts\python.exe -c "import nltk; nltk.download('averaged_perceptron_tagger')"
 ```
 
-### E. Optional OCR prerequisite (for scanned PDFs/images)
+### E. Optional: OCR prerequisite (for scanned PDFs/images)
 
-Install system Tesseract OCR and ensure `tesseract` is available on PATH.
+Install system [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) and ensure `tesseract` is available on `PATH`.
 
 ### F. Run the Streamlit app
 
 ```powershell
-cd C:\Users\<USER>\...\Redaction_Philter_Project
 .\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py
 ```
 
-Open: `http://localhost:8501`
+Open: **http://localhost:8501**
 
-### G. Supported input formats in GUI
+### G. Supported input formats
 
-- PDF
-- DOC / DOCX
-- HTML / HTM
-- TXT
-- JPEG / JPG (and other image OCR formats already supported in converter)
+| Format | Notes |
+|---|---|
+| PDF | Native text extraction + OCR fallback |
+| DOC / DOCX | Microsoft Word documents |
+| HTML / HTM | Tags stripped, text extracted |
+| TXT | Plain text |
+| JPEG / JPG | OCR via Tesseract |
 
 ### H. Available redaction modes
 
-- Full Philter (all PHI everywhere)
-- Body-aware (full in header, targeted in body)
-- Targeted only (whole document; preserves medications/common words while redacting configured PHI patterns)
+| Mode | Description |
+|---|---|
+| Full Philter | Redacts all PHI everywhere in the document |
+| Body-aware | Full Philter in header; targeted patterns in body |
+| Targeted-only | Whole document; preserves medications/common words |
 
 ### I. Quick sanity test after setup
 
-Create/upload a small sample containing:
+Upload a small sample containing:
 
 - `Hazel Daniels`
 - `February 1st, 2024`
 - `Shirley Road, Southampton SO14 7AA`
-- a medication phrase such as `Metformin 1000mg daily`
+- A medication phrase such as `Metformin 1000mg daily`
 
-Expected in targeted-only mode:
-
-- name redacted
-- date redacted
-- full address/postcode redacted
-- medication phrase preserved
+**Expected output in targeted-only mode:**
+- Name → redacted
+- Date → redacted
+- Full address and postcode → redacted
+- Medication phrase → **preserved**
 
 ### J. Common run mistakes
 
-- Wrong: `..venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py`
-- Correct: `.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py`
-
-- Wrong folder: running from parent directory without project path
-- Correct: run from `Redaction_Philter_Project` root (or provide full relative paths)
+| Wrong | Correct |
+|---|---|
+| `..venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py` | `.\.venv311\Scripts\python.exe -m streamlit run gui_pdf_redactor.py` |
+| Running from parent directory | Run from `Redaction_Philter_Project` root |
